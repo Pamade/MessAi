@@ -26,21 +26,22 @@ async function getSettings(): Promise<{ apiKey: string; model: string }> {
 
 let popupWindowId: number | undefined = undefined;
 
-chrome.action.onClicked.addListener(() => {
-    if (popupWindowId !== undefined) {
-        chrome.windows.get(popupWindowId, {}, () => {
-            if (chrome.runtime.lastError) {
-                popupWindowId = undefined;
-                createPopupWindow();
-            } else {
-
-                popupWindowId && chrome.windows.update(popupWindowId, { focused: true });
-            }
-        });
-    } else {
-        createPopupWindow();
-    }
-});
+if (chrome.action) {
+    chrome.action.onClicked.addListener(() => {
+        if (popupWindowId !== undefined) {
+            chrome.windows.get(popupWindowId, {}, () => {
+                if (chrome.runtime.lastError) {
+                    popupWindowId = undefined;
+                    createPopupWindow();
+                } else {
+                    popupWindowId && chrome.windows.update(popupWindowId, { focused: true });
+                }
+            });
+        } else {
+            createPopupWindow();
+        }
+    });
+}
 
 function createPopupWindow() {
     chrome.windows.create(
@@ -102,44 +103,46 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 });
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (!tab || !tab.id || !info.selectionText) return;
+if (chrome.contextMenus) {
+    chrome.contextMenus.onClicked.addListener((info, tab) => {
+        if (!tab || !tab.id || !info.selectionText) return;
 
-    const selectedText = info.selectionText;
-    let instruction = '';
+        const selectedText = info.selectionText;
+        let instruction = '';
 
-    switch (info.menuItemId) {
-        case 'fix-grammar':
-            instruction = 'Correct the following text for grammar and spelling errors, without changing the meaning. Only output the corrected text.';
-            break;
-        case 'rephrase-professional':
-            instruction = 'Rephrase the following text to sound more professional. Only output the rephrased text.';
-            break;
-        case 'rephrase-friendly':
-            instruction = 'Rephrase the following text to sound more friendly and conversational. Only output the rephrased text.';
-            break;
-        case 'rephrase-shorter':
-            instruction = 'Rewrite the following text to be more concise. Only output the rewritten text.';
-            break;
-        default:
-            return;
-    }
+        switch (info.menuItemId) {
+            case 'fix-grammar':
+                instruction = 'Correct the following text for grammar and spelling errors, without changing the meaning. Only output the corrected text.';
+                break;
+            case 'rephrase-professional':
+                instruction = 'Rephrase the following text to sound more professional. Only output the rephrased text.';
+                break;
+            case 'rephrase-friendly':
+                instruction = 'Rephrase the following text to sound more friendly and conversational. Only output the rephrased text.';
+                break;
+            case 'rephrase-shorter':
+                instruction = 'Rewrite the following text to be more concise. Only output the rewritten text.';
+                break;
+            default:
+                return;
+        }
 
-    const fullPrompt = `${instruction}
+        const fullPrompt = `${instruction}
 
 Text to process: "${selectedText}"`;
 
-    generateResponse(fullPrompt)
-        .then(response => {
-            chrome.tabs.sendMessage(tab.id!, {
-                type: 'REPLACE_SELECTED_TEXT',
-                text: response,
+        generateResponse(fullPrompt)
+            .then(response => {
+                chrome.tabs.sendMessage(tab.id!, {
+                    type: 'REPLACE_SELECTED_TEXT',
+                    text: response,
+                });
+            })
+            .catch(error => {
+                console.error('Context menu AI error:', error);
             });
-        })
-        .catch(error => {
-            console.error('Context menu AI error:', error);
-        });
-});
+    });
+}
 
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -195,9 +198,29 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         });
         return true; // Async response
     } else if (request.type === 'GET_OPEN_CHATS') {
-        chrome.tabs.query({ url: 'https://*.messenger.com/*' }, (tabs) => {
-            const chats = tabs.map(tab => ({ id: tab.id, title: tab.title }));
-            sendResponse({ success: true, chats });
+        chrome.tabs.query({ url: ['https://*.facebook.com/*'] }, (tabs) => {
+            const fbTabs = tabs.filter(t => t.url?.includes('facebook.com') && !t.url?.includes('/messages'));
+
+            Promise.all(
+                fbTabs.map(tab =>
+                    new Promise<any>((resolve) => {
+                        chrome.tabs.sendMessage(tab.id!, { type: 'GET_CHAT_NAME' }, (response) => {
+                            if (response?.chats) {
+                                resolve(response.chats.map((chat: any) => ({
+                                    id: tab.id,
+                                    title: chat.name,
+                                    chatIndex: chat.index
+                                })));
+                            } else {
+                                resolve([]);
+                            }
+                        });
+                    })
+                )
+            ).then(results => {
+                const allChats = results.flat();
+                sendResponse({ success: true, chats: allChats });
+            });
         });
         return true;
     }

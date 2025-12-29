@@ -26,12 +26,49 @@ body {
 
 .popup-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 12px;
     padding: 16px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-radius: 8px 8px 0 0;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.chat-selector-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.chat-selector {
+    flex: 1;
+    padding: 8px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    font-size: 13px;
+}
+
+.refresh-chats-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.refresh-chats-btn:hover {
+    background: rgba(255,255,255,0.3);
 }
 
 .header-left {

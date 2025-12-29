@@ -5,7 +5,8 @@
     "description": "Use gemini: command in Facebook Messenger to generate AI responses",
     "permissions": [
         "storage",
-        "tabs"
+        "tabs",
+        "contextMenus"
     ],
     "host_permissions": [
         "https://*.messenger.com/*",
@@ -15,7 +16,8 @@
         "default_title": "Messenger AI Assistant"
     },
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background.js",
+        "type": "module"
     },
     "content_scripts": [
         {

@@ -177,7 +177,32 @@ async function safeSendMessage(message: any): Promise<any> {
 // Listen for messages from popup
 try {
     chrome.runtime.onMessage.addListener((request: any, _sender: any, sendResponse: any) => {
-        if (request.type === 'UPDATE_SYSTEM_INSTRUCTION') {
+        if (request.type === 'GET_CHAT_NAME') {
+            const url = window.location.href;
+            
+            // Only work on facebook.com main page (not /messages)
+            if (url.includes('facebook.com') && !url.includes('/messages') && !url.includes('/t/')) {
+                const chats: { name: string, index: number }[] = [];
+                const headers = document.querySelectorAll('h2.html-h2');
+                const excludeWords = ['Menu', 'Facebook', 'Messenger', 'Active', 'Aktywny', 'Wiadomości'];
+                
+                headers.forEach((header, index) => {
+                    const text = header.textContent?.trim();
+                    const shouldExclude = excludeWords.some(word => text?.includes(word));
+                    if (text && text.length > 2 && text.length < 50 && !shouldExclude) {
+                        if (!chats.find(c => c.name === text)) {
+                            chats.push({ name: text, index });
+                        }
+                    }
+                });
+                
+                sendResponse({ chats });
+                return true;
+            }
+            
+            sendResponse({ chats: [] });
+            return true;
+        } else if (request.type === 'UPDATE_SYSTEM_INSTRUCTION') {
             systemInstruction = TONE_MAP[request.presetId] || 'You are a helpful AI assistant.';
             currentToneName = request.presetId || 'default';
             console.log(`✅ Tone updated: ${request.presetId}`);
@@ -198,9 +223,26 @@ try {
             }
             sendResponse({ success: true });
         } else if (request.type === 'INSERT_TEXT') {
-            const activeElement = document.activeElement as HTMLElement;
-            if (activeElement && activeElement.isContentEditable) {
-                replaceTextInEditor(activeElement, request.text);
+            if (request.chatIndex === undefined) {
+                sendResponse({ success: false });
+                return;
+            }
+            
+            const headers = document.querySelectorAll('h2.html-h2');
+            if (headers[request.chatIndex]) {
+                let container = headers[request.chatIndex].parentElement;
+                let targetInput: HTMLElement | null = null;
+                
+                for (let i = 0; i < 15 && container; i++) {
+                    targetInput = container.querySelector('[contenteditable="true"]') as HTMLElement;
+                    if (targetInput) break;
+                    container = container.parentElement;
+                }
+                
+                if (targetInput) {
+                    targetInput.textContent = request.text;
+                    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
             }
             sendResponse({ success: true });
         } else if (request.type === 'UPDATE_SETTINGS') {

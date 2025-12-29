@@ -258,7 +258,7 @@ interface HistoryItem {
     responseFormat: string;
 }
 
-function HistoryTab({ allTones, selectedChat, openChats }: { allTones: any[], selectedChat: number | null, openChats: any[] }) {
+function HistoryTab({ allTones, selectedChat }: { allTones: any[], selectedChat: string | null }) {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTone, setFilterTone] = useState<string>('');
@@ -307,13 +307,17 @@ function HistoryTab({ allTones, selectedChat, openChats }: { allTones: any[], se
     };
 
     const useAgain = (text: string) => {
-        const tabId = selectedChat || (openChats.length > 0 ? openChats[0].id : null);
-        if (tabId) {
-            chrome.tabs.sendMessage(tabId, {
-                type: 'INSERT_TEXT',
-                text: text,
-            });
-        }
+        if (!selectedChat) return;
+        
+        const [tabIdStr, chatIndexStr] = selectedChat.split('-');
+        const tabId = parseInt(tabIdStr);
+        const chatIndex = parseInt(chatIndexStr);
+
+        chrome.tabs.sendMessage(tabId, {
+            type: 'INSERT_TEXT',
+            text: text,
+            chatIndex: chatIndex,
+        });
     };
 
     const showNotification = (message: string) => {
@@ -656,7 +660,7 @@ function Popup() {
     const [newToneName, setNewToneName] = useState('');
     const [newToneInstruction, setNewToneInstruction] = useState('');
     const [openChats, setOpenChats] = useState<any[]>([]);
-    const [selectedChat, setSelectedChat] = useState<number | null>(null);
+    const [selectedChat, setSelectedChat] = useState<string | null>(null);
 
     // Load selected preset and settings from storage on mount
     useEffect(() => {
@@ -689,7 +693,8 @@ function Popup() {
             if (response?.success && response.chats) {
                 setOpenChats(response.chats);
                 if (response.chats.length > 0) {
-                    setSelectedChat(response.chats[0].id);
+                    const firstChat = response.chats[0];
+                    setSelectedChat(`${firstChat.id}-${firstChat.chatIndex}`);
                 }
             }
         });
@@ -742,30 +747,46 @@ function Popup() {
         <div className="popup-container">
             <GlobalStyles />
             <div className="popup-header">
-                <div className="header-left">
-                    <h1>🤖 Messenger AI</h1>
-                    {currentTone && (
-                        <div
-                            className="tone-indicator"
-                            onClick={() => setActiveTab('tones')}
-                            title="Click to change tone"
-                        >
-                            <span className="tone-indicator-label">Current:</span>
-                            <span className="tone-indicator-value">{currentTone.label}</span>
-                        </div>
-                    )}
+                <div className="header-top">
+                    <div className="header-left">
+                        <h1>🤖 Messenger AI</h1>
+                        {currentTone && (
+                            <div
+                                className="tone-indicator"
+                                onClick={() => setActiveTab('tones')}
+                                title="Click to change tone"
+                            >
+                                <span className="tone-indicator-label">Current:</span>
+                                <span className="tone-indicator-value">{currentTone.label}</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <div className="chat-selector">
+                <div className="chat-selector-row">
                     <select
+                        className="chat-selector"
                         value={selectedChat || ''}
-                        onChange={(e) => setSelectedChat(Number(e.target.value))}
+                        onChange={(e) => setSelectedChat(e.target.value)}
                     >
-                        {openChats.map(chat => (
-                            <option key={chat.id} value={chat.id}>
-                                {chat.title}
-                            </option>
-                        ))}
+                        {openChats.length === 0 ? (
+                            <option value="">No chats detected</option>
+                        ) : (
+                            openChats.map((chat, idx) => (
+                                <option key={`${chat.id}-${chat.chatIndex || idx}`} value={`${chat.id}-${chat.chatIndex}`}>
+                                    {chat.title}
+                                </option>
+                            ))
+                        )}
                     </select>
+                    <button className="refresh-chats-btn" onClick={() => chrome.runtime.sendMessage({ type: 'GET_OPEN_CHATS' }, (response: any) => {
+                        if (response?.success && response.chats) {
+                            setOpenChats(response.chats);
+                            if (response.chats.length > 0) {
+                                const firstChat = response.chats[0];
+                                setSelectedChat(`${firstChat.id}-${firstChat.chatIndex}`);
+                            }
+                        }
+                    })}>🔄</button>
                 </div>
             </div>
 
@@ -850,9 +871,9 @@ function Popup() {
 
                 {activeTab === 'commands' && <CommandsTab />}
 
-                {activeTab === 'history' && <HistoryTab allTones={allTones} selectedChat={selectedChat} openChats={openChats} />}
+                {activeTab === 'history' && <HistoryTab allTones={allTones} selectedChat={selectedChat} />}
 
-                {activeTab === 'templates' && <TemplatesTab selectedChat={selectedChat} openChats={openChats} />}
+                {activeTab === 'templates' && <TemplatesTab selectedChat={selectedChat} />}
 
                 {activeTab === 'settings' && (
                     <SettingsTab settings={settings} onSettingsChange={setSettings} />

@@ -23,7 +23,7 @@ const saveTemplates = (templates: Template[]): Promise<void> => {
     });
 };
 
-function TemplatesTab({ selectedChat, openChats }: { selectedChat: number | null, openChats: any[] }) {
+function TemplatesTab({ selectedChat }: { selectedChat: string | null }) {
     const [templates, setTemplates] = useState<Template[]>([]);
     const [newTitle, setNewTitle] = useState('');
     const [newContent, setNewContent] = useState('');
@@ -72,13 +72,17 @@ function TemplatesTab({ selectedChat, openChats }: { selectedChat: number | null
     };
 
     const handleInsert = (content: string) => {
-        const tabId = selectedChat || (openChats.length > 0 ? openChats[0].id : null);
-        if (tabId) {
-            chrome.tabs.sendMessage(tabId, {
-                type: 'INSERT_TEXT',
-                text: content,
-            });
-        }
+        if (!selectedChat) return;
+        
+        const [tabIdStr, chatIndexStr] = selectedChat.split('-');
+        const tabId = parseInt(tabIdStr);
+        const chatIndex = parseInt(chatIndexStr);
+
+        chrome.tabs.sendMessage(tabId, {
+            type: 'INSERT_TEXT',
+            text: content,
+            chatIndex: chatIndex,
+        });
     };
 
     return (
