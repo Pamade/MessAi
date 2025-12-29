@@ -1,8 +1,145 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import './popup.css';
+import TemplatesTab from './TemplatesTab';
 
-type Tab = 'tones' | 'commands' | 'settings' | 'history';
+const GlobalStyles = () => (
+    <style>{`
+        /* Templates Tab */
+        .templates-tab {
+            padding: 10px;
+        }
+
+        .template-form {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .template-form input,
+        .template-form textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #fff;
+            color: #333;
+        }
+
+        .template-form textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .template-form button {
+            align-self: flex-start;
+        }
+
+        .templates-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .template-item {
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .template-item h4 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .template-item p {
+            margin: 0 0 15px;
+            font-size: 14px;
+            color: #555;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .template-item .actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .template-item .actions button {
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+
+        .template-item .actions .insert-btn {
+            background-color: #4285F4;
+            color: white;
+        }
+        .template-item .actions .insert-btn:hover {
+            background-color: #357ae8;
+        }
+
+        .template-item .actions .edit-btn {
+            background-color: #f0ad4e;
+            color: white;
+        }
+        .template-item .actions .edit-btn:hover {
+            background-color: #ec9b2e;
+        }
+
+        .template-item .actions .delete-btn {
+            background-color: #d9534f;
+            color: white;
+        }
+        .template-item .actions .delete-btn:hover {
+            background-color: #c9302c;
+        }
+
+        .custom-tone-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        .custom-tone-form h3 {
+            margin-top: 0;
+        }
+
+        .custom-tone-form input,
+        .custom-tone-form textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .custom-tone-form textarea {
+            min-height: 60px;
+        }
+
+        .custom-tone-form .form-actions {
+            display: flex;
+            gap: 10px;
+        }
+    `}</style>
+);
+
+
+type Tab = 'tones' | 'commands' | 'settings' | 'history' | 'templates';
 
 const TONES = [
     { id: 'default', label: '📝 Default', description: 'Balanced, helpful, clear', systemInstruction: 'You are a helpful, balanced AI assistant. Respond clearly and accurately.' },
@@ -29,11 +166,7 @@ const COMMANDS = [
     }
 ];
 
-interface CommandsTabProps {
-    onSwitchTab?: (tab: Tab) => void;
-}
-
-function CommandsTab({ onSwitchTab }: CommandsTabProps) {
+function CommandsTab() {
     const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
 
     const toggleExpand = (command: string) => {
@@ -58,7 +191,7 @@ Example: /tone friendly`;
         <div className="commands-tab">
             <p className="instructions">Click a command to see details or use it in Messenger chat:</p>
             <div className="commands-list">
-                <div 
+                <div
                     className={`command-item clickable ${expandedCommand === '/help' ? 'expanded' : ''}`}
                     onClick={() => toggleExpand('/help')}
                 >
@@ -76,7 +209,7 @@ Example: /tone friendly`;
                     </div>
                 </div>
 
-                <div 
+                <div
                     className={`command-item clickable ${expandedCommand === '/tone' ? 'expanded' : ''}`}
                     onClick={() => toggleExpand('/tone')}
                 >
@@ -125,7 +258,7 @@ interface HistoryItem {
     responseFormat: string;
 }
 
-function HistoryTab() {
+function HistoryTab({ allTones, selectedChat, openChats }: { allTones: any[], selectedChat: number | null, openChats: any[] }) {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTone, setFilterTone] = useState<string>('');
@@ -133,22 +266,18 @@ function HistoryTab() {
 
     useEffect(() => {
         loadHistory();
-        
+
         // Listen for storage changes to update history in real-time
         const listener = (changes: any, areaName: string) => {
             if (areaName === 'local' && changes.promptHistory) {
                 setHistory(changes.promptHistory.newValue || []);
             }
         };
-        
+
         chrome.storage.onChanged.addListener(listener);
-        
-        // Also poll every 2 seconds as backup
-        const interval = setInterval(loadHistory, 2000);
-        
+
         return () => {
             chrome.storage.onChanged.removeListener(listener);
-            clearInterval(interval);
         };
     }, []);
 
@@ -175,6 +304,16 @@ function HistoryTab() {
         navigator.clipboard.writeText(text).then(() => {
             showNotification(`✓ ${type === 'prompt' ? 'Prompt' : 'Response'} copied!`);
         });
+    };
+
+    const useAgain = (text: string) => {
+        const tabId = selectedChat || (openChats.length > 0 ? openChats[0].id : null);
+        if (tabId) {
+            chrome.tabs.sendMessage(tabId, {
+                type: 'INSERT_TEXT',
+                text: text,
+            });
+        }
     };
 
     const showNotification = (message: string) => {
@@ -210,7 +349,7 @@ function HistoryTab() {
     };
 
     const getToneLabel = (toneId: string) => {
-        const tone = TONES.find(t => t.id === toneId);
+        const tone = allTones.find(t => t.id === toneId);
         return tone ? tone.label : toneId;
     };
 
@@ -236,7 +375,7 @@ function HistoryTab() {
                     onChange={(e) => setFilterTone(e.target.value)}
                 >
                     <option value="">All tones</option>
-                    {TONES.map(tone => (
+                    {allTones.map(tone => (
                         <option key={tone.id} value={tone.id}>{tone.label}</option>
                     ))}
                 </select>
@@ -261,7 +400,7 @@ function HistoryTab() {
                         const isExpanded = expandedItems.has(item.id);
                         const responsePreview = item.response ? (item.response.length > 150 ? item.response.substring(0, 150) + '...' : item.response) : null;
                         const showFullResponse = isExpanded && item.response;
-                        
+
                         return (
                             <div key={item.id} className="history-item">
                                 <div className="history-item-header">
@@ -277,10 +416,17 @@ function HistoryTab() {
                                     >
                                         📋
                                     </button>
+                                    <button
+                                        className="history-use-again-btn small"
+                                        onClick={() => useAgain(item.prompt)}
+                                        title="Use again"
+                                    >
+                                        🔄
+                                    </button>
                                 </div>
                                 {item.response && (
                                     <div className="history-response-section">
-                                        <div 
+                                        <div
                                             className={`history-response ${isExpanded ? 'expanded' : ''}`}
                                             onClick={() => toggleExpand(item.id)}
                                         >
@@ -300,6 +446,16 @@ function HistoryTab() {
                                             title="Copy response"
                                         >
                                             📋
+                                        </button>
+                                        <button
+                                            className="history-use-again-btn small"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                useAgain(item.response || '');
+                                            }}
+                                            title="Use again"
+                                        >
+                                            🔄
                                         </button>
                                     </div>
                                 )}
@@ -495,12 +651,21 @@ function Popup() {
         commandPrefix: 'gemini:',
         responseFormat: 'separate',
     });
+    const [customTones, setCustomTones] = useState<any[]>([]);
+    const [showCustomToneForm, setShowCustomToneForm] = useState(false);
+    const [newToneName, setNewToneName] = useState('');
+    const [newToneInstruction, setNewToneInstruction] = useState('');
+    const [openChats, setOpenChats] = useState<any[]>([]);
+    const [selectedChat, setSelectedChat] = useState<number | null>(null);
 
     // Load selected preset and settings from storage on mount
     useEffect(() => {
-        chrome.storage.local.get(['selectedPresetId'], (result: any) => {
+        chrome.storage.local.get(['selectedPresetId', 'customTones'], (result: any) => {
             if (result.selectedPresetId) {
                 setSelectedId(result.selectedPresetId);
+            }
+            if (result.customTones) {
+                setCustomTones(result.customTones);
             }
         });
 
@@ -512,11 +677,26 @@ function Popup() {
         });
 
         // Listen for tone updates from content script
-        chrome.runtime.onMessage.addListener((request: any) => {
+        const listener = (request: any) => {
             if (request.type === 'TONE_UPDATED' && request.presetId) {
                 setSelectedId(request.presetId);
             }
+        };
+        chrome.runtime.onMessage.addListener(listener);
+
+        // Fetch open chats
+        chrome.runtime.sendMessage({ type: 'GET_OPEN_CHATS' }, (response: any) => {
+            if (response?.success && response.chats) {
+                setOpenChats(response.chats);
+                if (response.chats.length > 0) {
+                    setSelectedChat(response.chats[0].id);
+                }
+            }
         });
+
+        return () => {
+            chrome.runtime.onMessage.removeListener(listener);
+        };
     }, []);
 
     const handlePresetClick = (id: string) => {
@@ -525,29 +705,47 @@ function Popup() {
         chrome.storage.local.set({ selectedPresetId: id });
 
         // Try to send message to content script if on Messenger tab
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
-            if (tabs[0]?.id) {
-                chrome.tabs.sendMessage(tabs[0].id, {
-                    type: 'UPDATE_SYSTEM_INSTRUCTION',
-                    presetId: id,
-                }).catch(() => {
-                    // Silently fail if not on a Messenger tab
-                    console.log('Popup: Not on a Messenger tab or content script not loaded');
-                });
-            }
-        });
+        const tabId = selectedChat || (openChats.length > 0 ? openChats[0].id : null);
+        if (tabId) {
+            chrome.tabs.sendMessage(tabId, {
+                type: 'UPDATE_SYSTEM_INSTRUCTION',
+                presetId: id,
+            }).catch(() => {
+                // Silently fail if not on a Messenger tab
+                console.log('Popup: Not on a Messenger tab or content script not loaded');
+            });
+        }
     };
 
+    const handleAddCustomTone = () => {
+        if (!newToneName || !newToneInstruction) return;
+        const newTone = {
+            id: `custom-${Date.now()}`,
+            label: newToneName,
+            description: newToneInstruction.substring(0, 50) + (newToneInstruction.length > 50 ? '...' : ''),
+            systemInstruction: newToneInstruction,
+        };
+        const updatedCustomTones = [...customTones, newTone];
+        setCustomTones(updatedCustomTones);
+        chrome.storage.local.set({ customTones: updatedCustomTones });
+        setShowCustomToneForm(false);
+        setNewToneName('');
+        setNewToneInstruction('');
+    };
+
+    const allTones = [...TONES, ...customTones];
+
     // Get current tone label
-    const currentTone = selectedId ? TONES.find(t => t.id === selectedId) : null;
+    const currentTone = selectedId ? allTones.find(t => t.id === selectedId) : null;
 
     return (
         <div className="popup-container">
+            <GlobalStyles />
             <div className="popup-header">
                 <div className="header-left">
                     <h1>🤖 Messenger AI</h1>
                     {currentTone && (
-                        <div 
+                        <div
                             className="tone-indicator"
                             onClick={() => setActiveTab('tones')}
                             title="Click to change tone"
@@ -557,7 +755,18 @@ function Popup() {
                         </div>
                     )}
                 </div>
-               
+                <div className="chat-selector">
+                    <select
+                        value={selectedChat || ''}
+                        onChange={(e) => setSelectedChat(Number(e.target.value))}
+                    >
+                        {openChats.map(chat => (
+                            <option key={chat.id} value={chat.id}>
+                                {chat.title}
+                            </option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             <div className="popup-tabs">
@@ -572,6 +781,12 @@ function Popup() {
                     onClick={() => setActiveTab('commands')}
                 >
                     Commands
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'templates' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('templates')}
+                >
+                    Templates
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
@@ -592,7 +807,7 @@ function Popup() {
                     <>
                         <p className="instructions">Select a tone for AI responses:</p>
                         <div className="presets-grid">
-                            {TONES.map((tone) => (
+                            {allTones.map((tone) => (
                                 <button
                                     key={tone.id}
                                     className={`preset-btn ${selectedId === tone.id ? 'selected' : ''}`}
@@ -603,16 +818,41 @@ function Popup() {
                                     <div className="tone-description">{tone.description}</div>
                                 </button>
                             ))}
+                             <button className="preset-btn add-new" onClick={() => setShowCustomToneForm(true)}>
+                                +
+                            </button>
                         </div>
+                        {showCustomToneForm && (
+                            <div className="custom-tone-form">
+                                <h3>Add Custom Tone</h3>
+                                <input
+                                    type="text"
+                                    placeholder="Tone Name (e.g., MyBrand Voice)"
+                                    value={newToneName}
+                                    onChange={(e) => setNewToneName(e.target.value)}
+                                />
+                                <textarea
+                                    placeholder="System Instruction (e.g., You are the social media voice for...)"
+                                    value={newToneInstruction}
+                                    onChange={(e) => setNewToneInstruction(e.target.value)}
+                                />
+                                <div className="form-actions">
+                                    <button className="btn-primary" onClick={handleAddCustomTone}>Add Tone</button>
+                                    <button className="btn-secondary" onClick={() => setShowCustomToneForm(false)}>Cancel</button>
+                                </div>
+                            </div>
+                        )}
                         <div className="footer">
                             <p className="tip">💡 Type <code>{settings.commandPrefix || 'gemini:'} your prompt</code> in chat</p>
                         </div>
                     </>
                 )}
 
-                {activeTab === 'commands' && <CommandsTab onSwitchTab={setActiveTab} />}
+                {activeTab === 'commands' && <CommandsTab />}
 
-                {activeTab === 'history' && <HistoryTab />}
+                {activeTab === 'history' && <HistoryTab allTones={allTones} selectedChat={selectedChat} openChats={openChats} />}
+
+                {activeTab === 'templates' && <TemplatesTab selectedChat={selectedChat} openChats={openChats} />}
 
                 {activeTab === 'settings' && (
                     <SettingsTab settings={settings} onSettingsChange={setSettings} />

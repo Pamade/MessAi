@@ -34,7 +34,7 @@ const COMMAND_HELP = `Available Commands:
 Example: /tone friendly`;
 
 // Tone map for command usage
-const TONE_MAP: { [key: string]: string } = {
+let TONE_MAP: { [key: string]: string } = {
     'default': 'You are a helpful, balanced AI assistant. Respond clearly and accurately.',
     'honest': 'You are an honest AI assistant. Be direct and truthful, even if uncomfortable.',
     'friendly': 'You are a warm and friendly AI assistant. Respond in a conversational, approachable tone.',
@@ -42,6 +42,21 @@ const TONE_MAP: { [key: string]: string } = {
     'nerd': 'You are an enthusiastic nerd. Dive deep into technical details with passion and expertise.',
     'cynic': 'You are a cynical AI assistant. Be skeptical, sarcastic, and critically minded.',
 };
+
+// Load custom tones and merge with default tones
+function loadTones() {
+    chrome.storage.local.get(['customTones'], (result: any) => {
+        if (result.customTones) {
+            const customTonesMap = result.customTones.reduce((acc: any, tone: any) => {
+                acc[tone.id] = tone.systemInstruction;
+                return acc;
+            }, {});
+            TONE_MAP = { ...TONE_MAP, ...customTonesMap };
+        }
+    });
+}
+
+loadTones();
 
 // Save prompt to history
 function savePromptToHistory(prompt: string, response?: string) {
@@ -175,6 +190,18 @@ try {
                 // Silently fail if popup not open
             });
             
+            sendResponse({ success: true });
+        } else if (request.type === 'REPLACE_SELECTED_TEXT') {
+            const activeElement = document.activeElement as HTMLElement;
+            if (activeElement && activeElement.isContentEditable) {
+                replaceTextInEditor(activeElement, request.text);
+            }
+            sendResponse({ success: true });
+        } else if (request.type === 'INSERT_TEXT') {
+            const activeElement = document.activeElement as HTMLElement;
+            if (activeElement && activeElement.isContentEditable) {
+                replaceTextInEditor(activeElement, request.text);
+            }
             sendResponse({ success: true });
         } else if (request.type === 'UPDATE_SETTINGS') {
             // Update settings when changed from popup

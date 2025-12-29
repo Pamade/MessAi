@@ -24,6 +24,124 @@ async function getSettings(): Promise<{ apiKey: string; model: string }> {
     });
 }
 
+let popupWindowId: number | undefined = undefined;
+
+chrome.action.onClicked.addListener(() => {
+    if (popupWindowId !== undefined) {
+        chrome.windows.get(popupWindowId, {}, () => {
+            if (chrome.runtime.lastError) {
+                popupWindowId = undefined;
+                createPopupWindow();
+            } else {
+
+                popupWindowId && chrome.windows.update(popupWindowId, { focused: true });
+            }
+        });
+    } else {
+        createPopupWindow();
+    }
+});
+
+function createPopupWindow() {
+    chrome.windows.create(
+        {
+            url: 'popup.html',
+            type: 'popup',
+            width: 420,
+            height: 650,
+        },
+        (window) => {
+            if (window) {
+                popupWindowId = window.id;
+            }
+        }
+    );
+}
+
+chrome.windows.onRemoved.addListener((windowId) => {
+    if (windowId === popupWindowId) {
+        popupWindowId = undefined;
+    }
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+    // Create parent menu
+    chrome.contextMenus.create({
+        id: 'ai-tools',
+        title: 'AI Tools',
+        contexts: ['selection'],
+    });
+
+    // Create children
+    chrome.contextMenus.create({
+        id: 'fix-grammar',
+        parentId: 'ai-tools',
+        title: 'Fix Grammar & Spelling',
+        contexts: ['selection'],
+    });
+
+    chrome.contextMenus.create({
+        id: 'rephrase-professional',
+        parentId: 'ai-tools',
+        title: 'Rephrase as more professional',
+        contexts: ['selection'],
+    });
+
+    chrome.contextMenus.create({
+        id: 'rephrase-friendly',
+        parentId: 'ai-tools',
+        title: 'Rephrase as more friendly',
+        contexts: ['selection'],
+    });
+
+    chrome.contextMenus.create({
+        id: 'rephrase-shorter',
+        parentId: 'ai-tools',
+        title: 'Make it shorter',
+        contexts: ['selection'],
+    });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+    if (!tab || !tab.id || !info.selectionText) return;
+
+    const selectedText = info.selectionText;
+    let instruction = '';
+
+    switch (info.menuItemId) {
+        case 'fix-grammar':
+            instruction = 'Correct the following text for grammar and spelling errors, without changing the meaning. Only output the corrected text.';
+            break;
+        case 'rephrase-professional':
+            instruction = 'Rephrase the following text to sound more professional. Only output the rephrased text.';
+            break;
+        case 'rephrase-friendly':
+            instruction = 'Rephrase the following text to sound more friendly and conversational. Only output the rephrased text.';
+            break;
+        case 'rephrase-shorter':
+            instruction = 'Rewrite the following text to be more concise. Only output the rewritten text.';
+            break;
+        default:
+            return;
+    }
+
+    const fullPrompt = `${instruction}
+
+Text to process: "${selectedText}"`;
+
+    generateResponse(fullPrompt)
+        .then(response => {
+            chrome.tabs.sendMessage(tab.id!, {
+                type: 'REPLACE_SELECTED_TEXT',
+                text: response,
+            });
+        })
+        .catch(error => {
+            console.error('Context menu AI error:', error);
+        });
+});
+
+
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     if (request.type === 'GENERATE_RESPONSE') {
         generateResponse(request.prompt, request.systemInstruction)
@@ -53,12 +171,12 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     } else if (request.type === 'UPDATE_SETTINGS') {
         const { apiKey, model, commandPrefix, responseFormat } = request.settings || {};
         const updates: any = {};
-        
+
         if (apiKey !== undefined) updates.apiKey = apiKey;
         if (model !== undefined) updates.model = model;
         if (commandPrefix !== undefined) updates.commandPrefix = commandPrefix;
         if (responseFormat !== undefined) updates.responseFormat = responseFormat;
-        
+
         chrome.storage.local.set(updates, () => {
             sendResponse({ success: true });
         });
@@ -76,6 +194,12 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
             sendResponse({ success: true });
         });
         return true; // Async response
+    } else if (request.type === 'GET_OPEN_CHATS') {
+        chrome.tabs.query({ url: 'https://*.messenger.com/*' }, (tabs) => {
+            const chats = tabs.map(tab => ({ id: tab.id, title: tab.title }));
+            sendResponse({ success: true, chats });
+        });
+        return true;
     }
 });
 
@@ -83,12 +207,12 @@ async function generateResponse(prompt: string, systemInstruction?: string): Pro
     const settings = await getSettings();
     const apiKey = settings.apiKey || DEFAULT_API_KEY;
     const modelName = settings.model || DEFAULT_MODEL;
-    
+
     // Basic API key validation
     if (!apiKey || apiKey.length < 20) {
         throw new Error('Invalid API key. Please set a valid API key in settings.');
     }
-    
+
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: modelName });
 
