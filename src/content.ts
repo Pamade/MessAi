@@ -185,13 +185,17 @@ try {
                 const chats: { name: string, index: number }[] = [];
                 const headers = document.querySelectorAll('h2.html-h2');
                 const excludeWords = ['Menu', 'Facebook', 'Messenger', 'Active', 'Aktywny', 'Wiadomości'];
+                const seenNames = new Set<string>();
                 
                 headers.forEach((header, index) => {
                     const text = header.textContent?.trim();
                     const shouldExclude = excludeWords.some(word => text?.includes(word));
-                    if (text && text.length > 2 && text.length < 50 && !shouldExclude) {
-                        if (!chats.find(c => c.name === text)) {
+                    if (text && text.length > 2 && text.length < 50 && !shouldExclude && !seenNames.has(text)) {
+                        // Check if the header itself is visible (chat window is open)
+                        const headerElement = header as HTMLElement;
+                        if (headerElement.offsetParent !== null) {
                             chats.push({ name: text, index });
+                            seenNames.add(text);
                         }
                     }
                 });
@@ -240,8 +244,9 @@ try {
                 }
                 
                 if (targetInput) {
-                    targetInput.textContent = request.text;
-                    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    targetInput.focus();
+                    document.execCommand('selectAll', false, undefined);
+                    document.execCommand('insertText', false, request.text);
                 }
             }
             sendResponse({ success: true });

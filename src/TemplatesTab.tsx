@@ -73,7 +73,7 @@ function TemplatesTab({ selectedChat }: { selectedChat: string | null }) {
 
     const handleInsert = (content: string) => {
         if (!selectedChat) return;
-        
+
         const [tabIdStr, chatIndexStr] = selectedChat.split('-');
         const tabId = parseInt(tabIdStr);
         const chatIndex = parseInt(chatIndexStr);
@@ -82,6 +82,10 @@ function TemplatesTab({ selectedChat }: { selectedChat: string | null }) {
             type: 'INSERT_TEXT',
             text: content,
             chatIndex: chatIndex,
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.log('Insert failed:', chrome.runtime.lastError.message);
+            }
         });
     };
 
