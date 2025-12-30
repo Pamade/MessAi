@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import './popup.css';
 import TemplatesTab from './TemplatesTab';
+import { Bot, Palette, Terminal, History, FileText, Settings, RefreshCw, Copy, Plus } from 'lucide-react';
 
 const GlobalStyles = () => (
     <style>{`
@@ -20,11 +21,12 @@ const GlobalStyles = () => (
         .template-form input,
         .template-form textarea {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
             background-color: #fff;
-            color: #333;
+            color: #1a1a1a;
+            font-size: 13px;
         }
 
         .template-form textarea {
@@ -43,26 +45,28 @@ const GlobalStyles = () => (
         }
 
         .template-item {
-            background-color: #f9f9f9;
-            border: 1px solid #eee;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
             border-radius: 8px;
-            padding: 15px;
+            padding: 16px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
         .template-item h4 {
             margin-top: 0;
-            margin-bottom: 5px;
-            font-size: 16px;
-            color: #333;
+            margin-bottom: 8px;
+            font-size: 15px;
+            color: #1a1a1a;
+            font-weight: 600;
         }
 
         .template-item p {
-            margin: 0 0 15px;
-            font-size: 14px;
-            color: #555;
+            margin: 0 0 16px;
+            font-size: 13px;
+            color: #6b7280;
             white-space: pre-wrap;
             word-break: break-word;
+            line-height: 1.5;
         }
 
         .template-item .actions {
@@ -73,46 +77,50 @@ const GlobalStyles = () => (
 
         .template-item .actions button {
             border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
+            padding: 8px 14px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 12px;
             font-weight: 500;
-            transition: background-color 0.2s;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .template-item .actions .insert-btn {
-            background-color: #4285F4;
+            background-color: #2563eb;
             color: white;
         }
         .template-item .actions .insert-btn:hover {
-            background-color: #357ae8;
+            background-color: #1d4ed8;
         }
 
         .template-item .actions .edit-btn {
-            background-color: #f0ad4e;
+            background-color: #f59e0b;
             color: white;
         }
         .template-item .actions .edit-btn:hover {
-            background-color: #ec9b2e;
+            background-color: #d97706;
         }
 
         .template-item .actions .delete-btn {
-            background-color: #d9534f;
+            background-color: #ef4444;
             color: white;
         }
         .template-item .actions .delete-btn:hover {
-            background-color: #c9302c;
+            background-color: #dc2626;
         }
 
         .custom-tone-form {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            margin-top: 15px;
-            padding: 15px;
-            background-color: #f9f9f9;
+            gap: 12px;
+            margin-top: 16px;
+            padding: 16px;
+            background-color: #ffffff;
             border-radius: 8px;
+            border: 1px solid #e5e7eb;
         }
 
         .custom-tone-form h3 {
@@ -122,9 +130,10 @@ const GlobalStyles = () => (
         .custom-tone-form input,
         .custom-tone-form textarea {
             width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 13px;
         }
 
         .custom-tone-form textarea {
@@ -142,12 +151,12 @@ const GlobalStyles = () => (
 type Tab = 'tones' | 'commands' | 'settings' | 'history' | 'templates';
 
 const TONES = [
-    { id: 'default', label: '📝 Default', description: 'Balanced, helpful, clear', systemInstruction: 'You are a helpful, balanced AI assistant. Respond clearly and accurately.' },
-    { id: 'honest', label: '✅ Honest', description: 'Direct, truthful, no sugarcoating', systemInstruction: 'You are an honest AI assistant. Be direct and truthful, even if uncomfortable.' },
-    { id: 'friendly', label: '😊 Friendly', description: 'Warm, approachable, conversational', systemInstruction: 'You are a warm and friendly AI assistant. Respond in a conversational, approachable tone.' },
-    { id: 'weird', label: '🎭 Weird', description: 'Quirky, unconventional, playful', systemInstruction: 'You are a quirky and unconventional AI assistant. Be creative, playful, and unexpected.' },
-    { id: 'nerd', label: '🤓 Nerd', description: 'Technical, detailed, enthusiastic', systemInstruction: 'You are an enthusiastic nerd. Dive deep into technical details with passion and expertise.' },
-    { id: 'cynic', label: '🤨 Cynic', description: 'Skeptical, sarcastic, critical', systemInstruction: 'You are a cynical AI assistant. Be skeptical, sarcastic, and critically minded.' },
+    { id: 'default', label: 'Default', description: 'Balanced, helpful, clear', systemInstruction: 'You are a helpful, balanced AI assistant. Respond clearly and accurately.' },
+    { id: 'honest', label: 'Honest', description: 'Direct, truthful, no sugarcoating', systemInstruction: 'You are an honest AI assistant. Be direct and truthful, even if uncomfortable.' },
+    { id: 'friendly', label: 'Friendly', description: 'Warm, approachable, conversational', systemInstruction: 'You are a warm and friendly AI assistant. Respond in a conversational, approachable tone.' },
+    { id: 'weird', label: 'Weird', description: 'Quirky, unconventional, playful', systemInstruction: 'You are a quirky and unconventional AI assistant. Be creative, playful, and unexpected.' },
+    { id: 'nerd', label: 'Nerd', description: 'Technical, detailed, enthusiastic', systemInstruction: 'You are an enthusiastic nerd. Dive deep into technical details with passion and expertise.' },
+    { id: 'cynic', label: 'Cynic', description: 'Skeptical, sarcastic, critical', systemInstruction: 'You are a cynical AI assistant. Be skeptical, sarcastic, and critically minded.' },
 ];
 
 const COMMANDS = [
@@ -258,7 +267,7 @@ interface HistoryItem {
     responseFormat: string;
 }
 
-function HistoryTab({ allTones, selectedChat }: { allTones: any[], selectedChat: string | null }) {
+function HistoryTab({ allTones }: { allTones: any[] }) {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterTone, setFilterTone] = useState<string>('');
@@ -303,20 +312,6 @@ function HistoryTab({ allTones, selectedChat }: { allTones: any[], selectedChat:
     const copyText = (text: string, type: 'prompt' | 'response') => {
         navigator.clipboard.writeText(text).then(() => {
             showNotification(`✓ ${type === 'prompt' ? 'Prompt' : 'Response'} copied!`);
-        });
-    };
-
-    const useAgain = (text: string) => {
-        if (!selectedChat) return;
-        
-        const [tabIdStr, chatIndexStr] = selectedChat.split('-');
-        const tabId = parseInt(tabIdStr);
-        const chatIndex = parseInt(chatIndexStr);
-
-        chrome.tabs.sendMessage(tabId, {
-            type: 'INSERT_TEXT',
-            text: text,
-            chatIndex: chatIndex,
         });
     };
 
@@ -418,15 +413,9 @@ function HistoryTab({ allTones, selectedChat }: { allTones: any[], selectedChat:
                                         onClick={() => copyText(item.prompt, 'prompt')}
                                         title="Copy prompt"
                                     >
-                                        📋
+                                        <Copy size={12} />
                                     </button>
-                                    <button
-                                        className="history-use-again-btn small"
-                                        onClick={() => useAgain(item.prompt)}
-                                        title="Use again"
-                                    >
-                                        🔄
-                                    </button>
+
                                 </div>
                                 {item.response && (
                                     <div className="history-response-section">
@@ -449,17 +438,7 @@ function HistoryTab({ allTones, selectedChat }: { allTones: any[], selectedChat:
                                             }}
                                             title="Copy response"
                                         >
-                                            📋
-                                        </button>
-                                        <button
-                                            className="history-use-again-btn small"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                useAgain(item.response || '');
-                                            }}
-                                            title="Use again"
-                                        >
-                                            🔄
+                                            <Copy size={12} />
                                         </button>
                                     </div>
                                 )}
@@ -489,6 +468,9 @@ function SettingsTab({ settings, onSettingsChange }: SettingsTabProps) {
     useEffect(() => {
         // Load models
         chrome.runtime.sendMessage({ type: 'GET_MODELS' }, (response: any) => {
+            if (chrome.runtime.lastError) {
+                return;
+            }
             if (response?.success && response.models) {
                 setModels(response.models);
             }
@@ -507,6 +489,11 @@ function SettingsTab({ settings, onSettingsChange }: SettingsTabProps) {
         chrome.runtime.sendMessage(
             { type: 'UPDATE_SETTINGS', settings: newSettings },
             (response: any) => {
+                if (chrome.runtime.lastError) {
+                    setSaveStatus('error');
+                    setTimeout(() => setSaveStatus('idle'), 2000);
+                    return;
+                }
                 if (response?.success) {
                     setSaveStatus('success');
                     onSettingsChange(newSettings);
@@ -675,6 +662,9 @@ function Popup() {
 
         // Load settings
         chrome.runtime.sendMessage({ type: 'GET_SETTINGS' }, (response: any) => {
+            if (chrome.runtime.lastError) {
+                return;
+            }
             if (response?.success && response.settings) {
                 setSettings(response.settings);
             }
@@ -690,6 +680,9 @@ function Popup() {
 
         // Fetch open chats
         chrome.runtime.sendMessage({ type: 'GET_OPEN_CHATS' }, (response: any) => {
+            if (chrome.runtime.lastError) {
+                return;
+            }
             if (response?.success && response.chats) {
                 setOpenChats(response.chats);
                 if (response.chats.length > 0) {
@@ -706,20 +699,20 @@ function Popup() {
 
     const handlePresetClick = (id: string) => {
         setSelectedId(id);
-        // Save to storage
         chrome.storage.local.set({ selectedPresetId: id });
 
-        // Try to send message to content script if on Messenger tab
-        const tabId = selectedChat || (openChats.length > 0 ? openChats[0].id : null);
-        if (tabId) {
-            chrome.tabs.sendMessage(tabId, {
-                type: 'UPDATE_SYSTEM_INSTRUCTION',
-                presetId: id,
-            }).catch(() => {
-                // Silently fail if not on a Messenger tab
-                console.log('Popup: Not on a Messenger tab or content script not loaded');
-            });
-        }
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]?.id) {
+                chrome.tabs.sendMessage(tabs[0].id, {
+                    type: 'UPDATE_SYSTEM_INSTRUCTION',
+                    presetId: id,
+                }, () => {
+                    if (chrome.runtime.lastError) {
+                        // Silently ignore - content script may not be loaded
+                    }
+                });
+            }
+        });
     };
 
     const handleAddCustomTone = () => {
@@ -749,7 +742,12 @@ function Popup() {
             <div className="popup-header">
                 <div className="header-top">
                     <div className="header-left">
-                        <h1>🤖 Messenger AI</h1>
+
+                        <h1 className="header-heading">
+                            <Bot size={20} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+                            <span>Messenger AI</span>
+                        </h1>
+
                         {currentTone && (
                             <div
                                 className="tone-indicator"
@@ -778,15 +776,20 @@ function Popup() {
                             ))
                         )}
                     </select>
-                    <button className="refresh-chats-btn" onClick={() => chrome.runtime.sendMessage({ type: 'GET_OPEN_CHATS' }, (response: any) => {
-                        if (response?.success && response.chats) {
-                            setOpenChats(response.chats);
-                            if (response.chats.length > 0) {
-                                const firstChat = response.chats[0];
-                                setSelectedChat(`${firstChat.id}-${firstChat.chatIndex}`);
+                    <button className="refresh-chats-btn" onClick={() => {
+                        chrome.runtime.sendMessage({ type: 'GET_OPEN_CHATS' }, (response: any) => {
+                            if (chrome.runtime.lastError) {
+                                return;
                             }
-                        }
-                    })}>🔄</button>
+                            if (response?.success && response.chats) {
+                                setOpenChats(response.chats);
+                                if (response.chats.length > 0) {
+                                    const firstChat = response.chats[0];
+                                    setSelectedChat(`${firstChat.id}-${firstChat.chatIndex}`);
+                                }
+                            }
+                        });
+                    }}><RefreshCw size={16} /></button>
                 </div>
             </div>
 
@@ -795,31 +798,36 @@ function Popup() {
                     className={`tab-btn ${activeTab === 'tones' ? 'active' : ''}`}
                     onClick={() => setActiveTab('tones')}
                 >
-                    Tones
+                    <Palette size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                    <span>Tones</span>
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'commands' ? 'active' : ''}`}
                     onClick={() => setActiveTab('commands')}
                 >
-                    Commands
+                    <Terminal size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                    <span>Commands</span>
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'templates' ? 'active' : ''}`}
                     onClick={() => setActiveTab('templates')}
                 >
-                    Templates
+                    <FileText size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                    <span>Templates</span>
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
                     onClick={() => setActiveTab('history')}
                 >
-                    History
+                    <History size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                    <span>History</span>
                 </button>
                 <button
-                    className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`}
+                    className={`tab-btn ${activeTab === 'settings' ? 'active' : 'tab'}`}
                     onClick={() => setActiveTab('settings')}
                 >
-                    Settings
+                    <Settings size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                    <span>Settings</span>
                 </button>
             </div>
 
@@ -839,8 +847,8 @@ function Popup() {
                                     <div className="tone-description">{tone.description}</div>
                                 </button>
                             ))}
-                             <button className="preset-btn add-new" onClick={() => setShowCustomToneForm(true)}>
-                                +
+                            <button className="preset-btn add-new" onClick={() => setShowCustomToneForm(true)}>
+                                <Plus size={24} />
                             </button>
                         </div>
                         {showCustomToneForm && (
@@ -871,7 +879,7 @@ function Popup() {
 
                 {activeTab === 'commands' && <CommandsTab />}
 
-                {activeTab === 'history' && <HistoryTab allTones={allTones} selectedChat={selectedChat} />}
+                {activeTab === 'history' && <HistoryTab allTones={allTones} />}
 
                 {activeTab === 'templates' && <TemplatesTab selectedChat={selectedChat} />}
 

@@ -136,6 +136,10 @@ Text to process: "${selectedText}"`;
                 chrome.tabs.sendMessage(tab.id!, {
                     type: 'REPLACE_SELECTED_TEXT',
                     text: response,
+                }, () => {
+                    if (chrome.runtime.lastError) {
+                        // Silently ignore
+                    }
                 });
             })
             .catch(error => {
@@ -205,6 +209,10 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
                 fbTabs.map(tab =>
                     new Promise<any>((resolve) => {
                         chrome.tabs.sendMessage(tab.id!, { type: 'GET_CHAT_NAME' }, (response) => {
+                            if (chrome.runtime.lastError) {
+                                resolve([]);
+                                return;
+                            }
                             if (response?.chats) {
                                 resolve(response.chats.map((chat: any) => ({
                                     id: tab.id,

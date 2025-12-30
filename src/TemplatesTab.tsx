@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { Edit2, Trash2, Send } from 'lucide-react';
 
 interface Template {
     id: string;
@@ -135,9 +136,18 @@ function TemplatesTab({ selectedChat }: { selectedChat: string | null }) {
                         <h4>{template.title}</h4>
                         <p>{template.content}</p>
                         <div className="actions">
-                            <button className="insert-btn" onClick={() => handleInsert(template.content)}>Insert</button>
-                            <button className="edit-btn" onClick={() => handleEdit(template)}>Edit</button>
-                            <button className="delete-btn" onClick={() => handleDelete(template.id)}>Delete</button>
+                            <button className="insert-btn" onClick={() => handleInsert(template.content)}>
+                                <Send size={14} />
+                                Insert
+                            </button>
+                            <button className="edit-btn" onClick={() => handleEdit(template)}>
+                                <Edit2 size={14} />
+                                Edit
+                            </button>
+                            <button className="delete-btn" onClick={() => handleDelete(template.id)}>
+                                <Trash2 size={14} />
+                                Delete
+                            </button>
                         </div>
                     </div>
                 )) : <p>No templates saved yet. Add one above to get started!</p>}

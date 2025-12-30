@@ -58,6 +58,13 @@ function loadTones() {
 
 loadTones();
 
+// Listen for custom tones changes
+chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
+    if (areaName === 'local' && changes.customTones) {
+        loadTones();
+    }
+});
+
 // Save prompt to history
 function savePromptToHistory(prompt: string, response?: string) {
     try {
@@ -207,19 +214,31 @@ try {
             sendResponse({ chats: [] });
             return true;
         } else if (request.type === 'UPDATE_SYSTEM_INSTRUCTION') {
-            systemInstruction = TONE_MAP[request.presetId] || 'You are a helpful AI assistant.';
-            currentToneName = request.presetId || 'default';
-            console.log(`✅ Tone updated: ${request.presetId}`);
+            // Reload tones first to ensure we have latest custom tones
+            chrome.storage.local.get(['customTones'], (result: any) => {
+                if (result.customTones) {
+                    const customTonesMap = result.customTones.reduce((acc: any, tone: any) => {
+                        acc[tone.id] = tone.systemInstruction;
+                        return acc;
+                    }, {});
+                    TONE_MAP = { ...TONE_MAP, ...customTonesMap };
+                }
+                
+                systemInstruction = TONE_MAP[request.presetId] || 'You are a helpful AI assistant.';
+                currentToneName = request.presetId || 'default';
+                console.log(`✅ Tone updated: ${request.presetId}`);
 
-            // Notify popup about tone change
-            chrome.runtime.sendMessage({
-                type: 'TONE_UPDATED',
-                presetId: request.presetId,
-            }).catch(() => {
-                // Silently fail if popup not open
+                // Notify popup about tone change
+                chrome.runtime.sendMessage({
+                    type: 'TONE_UPDATED',
+                    presetId: request.presetId,
+                }).catch(() => {
+                    // Silently fail if popup not open
+                });
+
+                sendResponse({ success: true });
             });
-
-            sendResponse({ success: true });
+            return true;
         } else if (request.type === 'REPLACE_SELECTED_TEXT') {
             const activeElement = document.activeElement as HTMLElement;
             if (activeElement && activeElement.isContentEditable) {
@@ -393,59 +412,35 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
     console.log(`🤖 Przetwarzam prompt: ${prompt}`);
 
     try {
-        // 4. Czyścimy pole i pokazujemy loader
-        // (Musimy wyczyścić, żeby użytkownik widział, że coś się dzieje, 
-        // ale w pamięci mamy "messageText")
-        await replaceTextInEditor(target, '⏳ Generuję...');
+        // Show loading overlay
+        showLoadingOverlay();
 
-        // 5. Wysyłamy do Background Script
+        // Send to Background Script
         const response = await safeSendMessage({
             type: 'GENERATE_RESPONSE',
             prompt: prompt,
             systemInstruction: systemInstruction,
         });
 
-        // 6. Sprawdzamy wynik
+        // Hide loading overlay
+        hideLoadingOverlay();
+
+        // Check result
         if (response && response.success) {
-            // Save to history (with full response)
+            // Save to history
             savePromptToHistory(prompt, response.text);
 
-            const responseFormat = settings.responseFormat || 'separate';
-
-            if (responseFormat === 'edit') {
-                // Edit original: replace gemini: command with response
-                await replaceTextInEditor(target, response.text);
-                setTimeout(() => {
-                    simulateSendMessage(target);
-                }, 400);
-            } else if (responseFormat === 'both') {
-                // Both: send original + response
-                await replaceTextInEditor(target, messageText);
-                simulateSendMessage(target);
-                await sleep(600);
-                await replaceTextInEditor(target, response.text);
-                setTimeout(() => {
-                    simulateSendMessage(target);
-                }, 400);
-            } else {
-                // Separate (default): send original, then response
-                await replaceTextInEditor(target, messageText);
-                simulateSendMessage(target);
-                await sleep(600);
-                await replaceTextInEditor(target, response.text);
-                setTimeout(() => {
-                    simulateSendMessage(target);
-                }, 400);
-            }
+            // Replace text in editor but DON'T send
+            await replaceTextInEditor(target, response.text);
         } else {
             console.error('Błąd z background:', response);
             await replaceTextInEditor(target, `❌ Błąd: ${response?.error || 'Brak odpowiedzi API'}`);
         }
     } catch (error: any) {
+        hideLoadingOverlay();
         console.error('Błąd Content Script:', error);
         const errorMessage = error.message || 'Unknown error';
 
-        // Provide user-friendly error messages
         if (errorMessage.includes('Extension context invalidated') ||
             errorMessage.includes('Extension was reloaded')) {
             await replaceTextInEditor(target, `⚠️ Extension was reloaded. Please refresh this page (F5) to continue.`);
@@ -483,29 +478,64 @@ async function replaceTextInEditor(target: HTMLElement, newText: string) {
     document.execCommand('insertText', false, newText);
 }
 
-function simulateSendMessage(inputElement: HTMLElement) {
-    const sendButton = findSendButton(inputElement);
-    if (sendButton) {
-        const events = ['mousedown', 'mouseup', 'click'];
-        events.forEach(eventType => {
-            sendButton.dispatchEvent(new MouseEvent(eventType, {
-                bubbles: true, cancelable: true, view: window, buttons: 1
-            }));
-        });
-    } else {
-        // Fallback: Enter
-        inputElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
-    }
+// Loading overlay functions
+function showLoadingOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'ai-loading-overlay';
+    overlay.innerHTML = `
+        <div style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        ">
+            <div style="
+                background: white;
+                padding: 40px 60px;
+                border-radius: 16px;
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+                text-align: center;
+            ">
+                <div style="
+                    width: 60px;
+                    height: 60px;
+                    border: 4px solid #e5e7eb;
+                    border-top-color: #2563eb;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    margin: 0 auto 20px;
+                "></div>
+                <div style="
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #1a1a1a;
+                    margin-bottom: 8px;
+                ">Response generating...</div>
+                <div style="
+                    font-size: 14px;
+                    color: #6b7280;
+                ">Please wait</div>
+            </div>
+        </div>
+        <style>
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+        </style>
+    `;
+    document.body.appendChild(overlay);
 }
 
-function findSendButton(_inputElement: HTMLElement): HTMLElement | null {
-    // 1. Szukamy po unikalnej ścieżce SVG
-    const svgPath = document.querySelector('path[d^="M16.6915026,12.4744748"]');
-    if (svgPath) return svgPath.closest('[role="button"]') as HTMLElement;
-
-    // 2. Szukamy po aria-label (PL/EN)
-    const ariaBtn = document.querySelector('[role="button"][aria-label*="Enter"], [role="button"][aria-label*="send"], [role="button"][aria-label*="Send"]');
-    if (ariaBtn) return ariaBtn as HTMLElement;
-
-    return null;
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('ai-loading-overlay');
+    if (overlay) {
+        overlay.remove();
+    }
 }
