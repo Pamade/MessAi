@@ -73,10 +73,10 @@ function savePromptToHistory(prompt: string, response?: string) {
         chrome.storage.local.get(['promptHistory'], (result: any) => {
             const history: any[] = result.promptHistory || [];
             history.unshift(historyItem); // Add to beginning
-            
+
             // Limit history size
             const limitedHistory = history.slice(0, MAX_HISTORY_SIZE);
-            
+
             chrome.storage.local.set({ promptHistory: limitedHistory }, () => {
                 console.log('✅ Prompt saved to history:', prompt.substring(0, 50) + '...');
             });
@@ -90,11 +90,11 @@ function savePromptToHistory(prompt: string, response?: string) {
 function parseCommand(messageText: string): { command: string; args: string[] } | null {
     const trimmed = messageText.trim();
     if (!trimmed.startsWith('/')) return null;
-    
+
     const parts = trimmed.split(/\s+/);
     const command = parts[0].toLowerCase();
     const args = parts.slice(1);
-    
+
     return { command, args };
 }
 
@@ -110,24 +110,24 @@ async function handleToneCommand(target: HTMLElement, args: string[]) {
         await replaceTextInEditor(target, '❌ Usage: /tone <name>\nValid tones: default, honest, friendly, weird, nerd, cynic');
         return;
     }
-    
+
     const toneName = args[0].toLowerCase();
     if (!TONE_MAP[toneName]) {
         await replaceTextInEditor(target, `❌ Invalid tone: ${args[0]}\nValid tones: default, honest, friendly, weird, nerd, cynic`);
         return;
     }
-    
+
     systemInstruction = TONE_MAP[toneName];
     currentToneName = toneName;
     await replaceTextInEditor(target, `✅ Tone changed to: ${toneName}`);
-    
+
     // Also update via message to sync with popup
     try {
         await safeSendMessage({
             type: 'UPDATE_SYSTEM_INSTRUCTION',
             presetId: toneName,
         });
-        
+
         // Notify popup about tone change
         chrome.runtime.sendMessage({
             type: 'TONE_UPDATED',
@@ -149,9 +149,9 @@ async function handleSettingsCommand(target: HTMLElement) {
 function isExtensionContextValid(): boolean {
     try {
         // Try to access chrome.runtime.id - if context is invalid, this will throw
-        return typeof chrome !== 'undefined' && 
-               typeof chrome.runtime !== 'undefined' && 
-               chrome.runtime.id !== undefined;
+        return typeof chrome !== 'undefined' &&
+            typeof chrome.runtime !== 'undefined' &&
+            chrome.runtime.id !== undefined;
     } catch (e) {
         return false;
     }
@@ -162,11 +162,11 @@ async function safeSendMessage(message: any): Promise<any> {
     if (!isExtensionContextValid()) {
         throw new Error('Extension context invalidated. Please reload the page.');
     }
-    
+
     try {
         return await chrome.runtime.sendMessage(message);
     } catch (error: any) {
-        if (error.message?.includes('Extension context invalidated') || 
+        if (error.message?.includes('Extension context invalidated') ||
             error.message?.includes('message port closed')) {
             throw new Error('Extension was reloaded. Please refresh the page to continue using the extension.');
         }
@@ -179,14 +179,14 @@ try {
     chrome.runtime.onMessage.addListener((request: any, _sender: any, sendResponse: any) => {
         if (request.type === 'GET_CHAT_NAME') {
             const url = window.location.href;
-            
+
             // Only work on facebook.com main page (not /messages)
             if (url.includes('facebook.com') && !url.includes('/messages') && !url.includes('/t/')) {
                 const chats: { name: string, index: number }[] = [];
                 const headers = document.querySelectorAll('h2.html-h2');
                 const excludeWords = ['Menu', 'Facebook', 'Messenger', 'Active', 'Aktywny', 'Wiadomości'];
                 const seenNames = new Set<string>();
-                
+
                 headers.forEach((header, index) => {
                     const text = header.textContent?.trim();
                     const shouldExclude = excludeWords.some(word => text?.includes(word));
@@ -199,18 +199,18 @@ try {
                         }
                     }
                 });
-                
+
                 sendResponse({ chats });
                 return true;
             }
-            
+
             sendResponse({ chats: [] });
             return true;
         } else if (request.type === 'UPDATE_SYSTEM_INSTRUCTION') {
             systemInstruction = TONE_MAP[request.presetId] || 'You are a helpful AI assistant.';
             currentToneName = request.presetId || 'default';
             console.log(`✅ Tone updated: ${request.presetId}`);
-            
+
             // Notify popup about tone change
             chrome.runtime.sendMessage({
                 type: 'TONE_UPDATED',
@@ -218,7 +218,7 @@ try {
             }).catch(() => {
                 // Silently fail if popup not open
             });
-            
+
             sendResponse({ success: true });
         } else if (request.type === 'REPLACE_SELECTED_TEXT') {
             const activeElement = document.activeElement as HTMLElement;
@@ -227,22 +227,35 @@ try {
             }
             sendResponse({ success: true });
         } else if (request.type === 'INSERT_TEXT') {
+            // For /messages page, just find any contenteditable
+            if (window.location.href.includes('/messages') || window.location.href.includes('/t/')) {
+                const input = document.querySelector('[contenteditable="true"]') as HTMLElement;
+                if (input) {
+                    input.focus();
+                    document.execCommand('selectAll', false, undefined);
+                    document.execCommand('insertText', false, request.text);
+                }
+                sendResponse({ success: true });
+                return;
+            }
+
+            // For facebook.com main page with chat windows
             if (request.chatIndex === undefined) {
                 sendResponse({ success: false });
                 return;
             }
-            
+
             const headers = document.querySelectorAll('h2.html-h2');
             if (headers[request.chatIndex]) {
                 let container = headers[request.chatIndex].parentElement;
                 let targetInput: HTMLElement | null = null;
-                
+
                 for (let i = 0; i < 15 && container; i++) {
                     targetInput = container.querySelector('[contenteditable="true"]') as HTMLElement;
                     if (targetInput) break;
                     container = container.parentElement;
                 }
-                
+
                 if (targetInput) {
                     targetInput.focus();
                     document.execCommand('selectAll', false, undefined);
@@ -273,7 +286,7 @@ try {
             const command = request.command;
             const activeElement = document.activeElement as HTMLElement;
             let target: HTMLElement | null = null;
-            
+
             if (activeElement && activeElement.isContentEditable) {
                 target = activeElement;
             } else {
@@ -283,22 +296,22 @@ try {
                     target = editable;
                 }
             }
-            
+
             if (target) {
                 target.focus();
                 target.innerText = command;
                 // Trigger Enter key to execute
                 setTimeout(() => {
-                    const enterEvent = new KeyboardEvent('keydown', { 
-                        key: 'Enter', 
-                        keyCode: 13, 
+                    const enterEvent = new KeyboardEvent('keydown', {
+                        key: 'Enter',
+                        keyCode: 13,
                         bubbles: true,
                         cancelable: true
                     });
                     target!.dispatchEvent(enterEvent);
                 }, 100);
             }
-            
+
             sendResponse({ success: true });
         }
     });
@@ -337,7 +350,7 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
     if (command) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        
+
         if (isProcessing) return;
         isProcessing = true;
 
@@ -431,9 +444,9 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
     } catch (error: any) {
         console.error('Błąd Content Script:', error);
         const errorMessage = error.message || 'Unknown error';
-        
+
         // Provide user-friendly error messages
-        if (errorMessage.includes('Extension context invalidated') || 
+        if (errorMessage.includes('Extension context invalidated') ||
             errorMessage.includes('Extension was reloaded')) {
             await replaceTextInEditor(target, `⚠️ Extension was reloaded. Please refresh this page (F5) to continue.`);
         } else {

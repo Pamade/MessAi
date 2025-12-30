@@ -72,7 +72,23 @@ function TemplatesTab({ selectedChat }: { selectedChat: string | null }) {
     };
 
     const handleInsert = (content: string) => {
-        if (!selectedChat) return;
+        if (!selectedChat) {
+            // No chat selected - find /messages tab
+            chrome.tabs.query({ url: 'https://*.facebook.com/*' }, (tabs) => {
+                const messagesTab = tabs.find(t => t.url?.includes('/messages'));
+                if (messagesTab?.id) {
+                    chrome.tabs.sendMessage(messagesTab.id, {
+                        type: 'INSERT_TEXT',
+                        text: content,
+                    }, () => {
+                        if (chrome.runtime.lastError) {
+                            console.log('Insert failed:', chrome.runtime.lastError.message);
+                        }
+                    });
+                }
+            });
+            return;
+        }
 
         const [tabIdStr, chatIndexStr] = selectedChat.split('-');
         const tabId = parseInt(tabIdStr);
