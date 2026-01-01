@@ -2,8 +2,8 @@ let isProcessing = false;
 let systemInstruction = 'You are a helpful AI assistant.'; // Default system instruction
 let currentToneName = 'default'; // Track current tone name for history
 let settings: any = {
-    commandPrefix: 'gemini:',
-    responseFormat: 'separate',
+    commandPrefix: 'prompt:',
+    responseFormat: 'edit',
     model: 'gemini-2.5-flash',
 };
 declare const chrome: any;
@@ -74,7 +74,7 @@ function savePromptToHistory(prompt: string, response?: string) {
             tone: currentToneName,
             timestamp: Date.now(),
             response: response || undefined, // Save full response
-            responseFormat: settings.responseFormat || 'separate',
+            responseFormat: settings.responseFormat || 'edit',
         };
 
         chrome.storage.local.get(['promptHistory'], (result: any) => {
@@ -342,10 +342,10 @@ try {
 chrome.storage.onChanged.addListener((changes: any, areaName: string) => {
     if (areaName === 'local') {
         if (changes.commandPrefix) {
-            settings.commandPrefix = changes.commandPrefix.newValue || 'gemini:';
+            settings.commandPrefix = changes.commandPrefix.newValue || 'prompt:';
         }
         if (changes.responseFormat) {
-            settings.responseFormat = changes.responseFormat.newValue || 'separate';
+            settings.responseFormat = changes.responseFormat.newValue || 'edit';
         }
         if (changes.model) {
             settings.model = changes.model.newValue || 'gemini-2.5-flash';
@@ -397,7 +397,7 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
     }
 
     // 4. Check for AI prefix (gemini: or custom prefix)
-    const prefix = settings.commandPrefix || 'gemini:';
+    const prefix = settings.commandPrefix || 'prompt:';
     if (!messageText.toLowerCase().startsWith(prefix.toLowerCase()) && !messageText.startsWith('gpt:')) return;
 
     // 5. Blokujemy Enter
@@ -412,66 +412,33 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
     console.log(`🤖 Przetwarzam prompt: ${prompt}`);
 
     try {
-        const responseFormat = settings.responseFormat || 'separate';
+        const responseFormat = settings.responseFormat || 'edit';
 
-        if (responseFormat === 'separate') {
-            // Send original message with prefix first, BEFORE generating
-            await replaceTextInEditor(target, messageText);
-            await sleep(100);
-            
-            // Simulate Enter key press to send
-            target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
-            target.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
-            target.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
-            
-            await sleep(1000);
+        // Show loading overlay
+        showLoadingOverlay();
 
-            // Show loading overlay
-            showLoadingOverlay();
+        // Generate response
+        const response = await safeSendMessage({
+            type: 'GENERATE_RESPONSE',
+            prompt: prompt,
+            systemInstruction: systemInstruction,
+        });
 
-            // Generate response
-            const response = await safeSendMessage({
-                type: 'GENERATE_RESPONSE',
-                prompt: prompt,
-                systemInstruction: systemInstruction,
-            });
+        hideLoadingOverlay();
 
-            hideLoadingOverlay();
+        if (response && response.success) {
+            savePromptToHistory(prompt, response.text);
 
-            if (response && response.success) {
-                savePromptToHistory(prompt, response.text);
+            if (responseFormat === 'edit') {
+                // Only response, no prompt
                 await replaceTextInEditor(target, response.text);
-            } else {
-                console.error('Error from background:', response);
-                await replaceTextInEditor(target, `❌ Error: ${response?.error || 'No API response'}`);
+            } else if (responseFormat === 'both') {
+                // Original message + response in one message
+                await replaceTextInEditor(target, `[${messageText}] : \n\n${response.text}`);
             }
         } else {
-            // Show loading overlay
-            showLoadingOverlay();
-
-            // Generate response
-            const response = await safeSendMessage({
-                type: 'GENERATE_RESPONSE',
-                prompt: prompt,
-                systemInstruction: systemInstruction,
-            });
-
-            hideLoadingOverlay();
-
-            if (response && response.success) {
-                savePromptToHistory(prompt, response.text);
-
-                if (responseFormat === 'edit') {
-                    // Only response, no prompt
-                    await replaceTextInEditor(target, response.text);
-                } else if (responseFormat === 'both') {
-                    // Original message + response in one message
-                    await replaceTextInEditor(target, `${messageText}\n\n${response.text}`);
-                }
-            } else {
-                console.error('Error from background:', response);
-                await replaceTextInEditor(target, `❌ Error: ${response?.error || 'No API response'}`);
-            }
+            console.error('Error from background:', response);
+            await replaceTextInEditor(target, `❌ Error: ${response?.error || 'No API response'}`);
         }
     } catch (error: any) {
         hideLoadingOverlay();

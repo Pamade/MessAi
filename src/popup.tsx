@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import './popup.css';
 import TemplatesTab from './TemplatesTab';
-import { Bot, Palette, Terminal, History, FileText, Settings, RefreshCw, Copy, Plus } from 'lucide-react';
+import SettingsTab from './SettingsTab';
+import { Bot, Terminal, History, FileText, Settings, RefreshCw, Copy, Plus } from 'lucide-react';
 
 const GlobalStyles = () => (
     <style>{`
@@ -289,7 +290,7 @@ const GlobalStyles = () => (
 );
 
 
-type Tab = 'tones' | 'commands' | 'settings' | 'history' | 'templates' | 'guide';
+type Tab = 'generate' | 'commands' | 'settings' | 'history' | 'templates' | 'guide';
 
 const TONES = [
     { id: 'default', label: 'Default', description: 'Balanced, helpful, clear', systemInstruction: 'You are a helpful, balanced AI assistant. Respond clearly and accurately.' },
@@ -319,8 +320,8 @@ const COMMANDS = [
 function GuideTab() {
     return (
         <div className="guide-tab">
-            <h3>🚀 Quick Start Guide</h3>
-            
+            <h3>Quick Start Guide</h3>
+
             <div className="guide-section">
                 <h4>How to Use</h4>
                 <ol>
@@ -333,9 +334,6 @@ function GuideTab() {
 
             <div className="guide-section">
                 <h4>Response Formats</h4>
-                <div className="format-example">
-                    <strong>Separate:</strong> Sends your prompt first, then generates response
-                </div>
                 <div className="format-example">
                     <strong>Edit:</strong> Only generates response (no prompt sent)
                 </div>
@@ -357,13 +355,13 @@ function GuideTab() {
             <div className="guide-section">
                 <h4>Examples</h4>
                 <div className="example-box">
-                    <strong>Example 1:</strong><br/>
-                    Type: <code>prompt: write a professional thank you message</code><br/>
+                    <strong>Example 1:</strong><br />
+                    Type: <code>prompt: write a professional thank you message</code><br />
                     Result: AI generates a professional thank you message
                 </div>
                 <div className="example-box">
-                    <strong>Example 2:</strong><br/>
-                    Type: <code>prompt: make this friendlier: I need the report by tomorrow</code><br/>
+                    <strong>Example 2:</strong><br />
+                    Type: <code>prompt: make this friendlier: I need the report by tomorrow</code><br />
                     Result: AI rewrites in a friendly tone
                 </div>
             </div>
@@ -662,192 +660,185 @@ interface SettingsTabProps {
     onSettingsChange: (settings: any) => void;
 }
 
-function SettingsTab({ settings, onSettingsChange }: SettingsTabProps) {
-    const [apiKey, setApiKey] = useState(settings.apiKey || '');
-    const [showApiKey, setShowApiKey] = useState(false);
-    const [model, setModel] = useState(settings.model || 'gemini-2.5-flash');
-    const [commandPrefix, setCommandPrefix] = useState(settings.commandPrefix || 'prompt:');
-    const [responseFormat, setResponseFormat] = useState(settings.responseFormat || 'separate');
-    const [models, setModels] = useState<any[]>([]);
-    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+// function SettingsTab({ settings, onSettingsChange }: SettingsTabProps) {
+//     const [apiKey, setApiKey] = useState(settings.apiKey || '');
+//     const [showApiKey, setShowApiKey] = useState(false);
+//     const [model, setModel] = useState(settings.model || 'gemini-2.5-flash');
+//     const [commandPrefix, setCommandPrefix] = useState(settings.commandPrefix || 'prompt:');
+//     const [responseFormat, setResponseFormat] = useState(settings.responseFormat || 'edit');
+//     const [models, setModels] = useState<any[]>([]);
+//     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
 
-    useEffect(() => {
-        // Load models
-        chrome.runtime.sendMessage({ type: 'GET_MODELS' }, (response: any) => {
-            if (chrome.runtime.lastError) {
-                return;
-            }
-            if (response?.success && response.models) {
-                setModels(response.models);
-            }
-        });
-    }, []);
+//     useEffect(() => {
+//         // Load models
+//         chrome.runtime.sendMessage({ type: 'GET_MODELS' }, (response: any) => {
+//             if (chrome.runtime.lastError) {
+//                 return;
+//             }
+//             if (response?.success && response.models) {
+//                 setModels(response.models);
+//             }
+//         });
+//     }, []);
 
-    const handleSave = () => {
-        setSaveStatus('saving');
-        const newSettings = {
-            apiKey: apiKey.trim(),
-            model,
-            commandPrefix: commandPrefix.trim(),
-            responseFormat,
-        };
+//     const handleSave = () => {
+//         setSaveStatus('saving');
+//         const newSettings = {
+//             apiKey: apiKey.trim(),
+//             model,
+//             commandPrefix: commandPrefix.trim(),
+//             responseFormat,
+//         };
 
-        chrome.runtime.sendMessage(
-            { type: 'UPDATE_SETTINGS', settings: newSettings },
-            (response: any) => {
-                if (chrome.runtime.lastError) {
-                    setSaveStatus('error');
-                    setTimeout(() => setSaveStatus('idle'), 2000);
-                    return;
-                }
-                if (response?.success) {
-                    setSaveStatus('success');
-                    onSettingsChange(newSettings);
-                    setTimeout(() => setSaveStatus('idle'), 2000);
-                } else {
-                    setSaveStatus('error');
-                    setTimeout(() => setSaveStatus('idle'), 2000);
-                }
-            }
-        );
-    };
+//         chrome.runtime.sendMessage(
+//             { type: 'UPDATE_SETTINGS', settings: newSettings },
+//             (response: any) => {
+//                 if (chrome.runtime.lastError) {
+//                     setSaveStatus('error');
+//                     setTimeout(() => setSaveStatus('idle'), 2000);
+//                     return;
+//                 }
+//                 if (response?.success) {
+//                     setSaveStatus('success');
+//                     onSettingsChange(newSettings);
+//                     setTimeout(() => setSaveStatus('idle'), 2000);
+//                 } else {
+//                     setSaveStatus('error');
+//                     setTimeout(() => setSaveStatus('idle'), 2000);
+//                 }
+//             }
+//         );
+//     };
 
-    const handleReset = () => {
-        setApiKey('');
-        setModel('gemini-2.5-flash');
-        setCommandPrefix('prompt:');
-        setResponseFormat('separate');
-    };
+//     const handleReset = () => {
+//         setApiKey('');
+//         setModel('gemini-2.5-flash');
+//         setCommandPrefix('prompt:');
+//         setResponseFormat('edit');
+//     };
 
-    return (
-        <div className="settings-tab">
-            <div className="settings-form">
-                <div className="setting-group">
-                    <label htmlFor="api-key">API Key</label>
-                    <div className="input-with-toggle">
-                        <input
-                            id="api-key"
-                            type={showApiKey ? 'text' : 'password'}
-                            value={apiKey}
-                            onChange={(e) => setApiKey(e.target.value)}
-                            placeholder="Enter your Gemini API key"
-                        />
-                        <button
-                            type="button"
-                            className="toggle-visibility"
-                            onClick={() => setShowApiKey(!showApiKey)}
-                        >
-                            {showApiKey ? '👁️' : '👁️‍🗨️'}
-                        </button>
-                    </div>
-                    <small>Leave empty to use default key</small>
-                </div>
+//     return (
+//         <div className="settings-tab">
+//             <div className="settings-form">
+//                 <div className="setting-group">
+//                     <label htmlFor="api-key">API Key</label>
+//                     <div className="input-with-toggle">
+//                         <input
+//                             id="api-key"
+//                             type={showApiKey ? 'text' : 'password'}
+//                             value={apiKey}
+//                             onChange={(e) => setApiKey(e.target.value)}
+//                             placeholder="Enter your Gemini API key"
+//                         />
+//                         <button
+//                             type="button"
+//                             className="toggle-visibility"
+//                             onClick={() => setShowApiKey(!showApiKey)}
+//                         >
+//                             {showApiKey ? '👁️' : '👁️‍🗨️'}
+//                         </button>
+//                     </div>
+//                     <small>Get free API key at <a href="https://aistudio.google.com/apikey" target="_blank" style={{ color: '#2563eb' }}>Google AI Studio</a>. Always free!</small>
+//                 </div>
 
-                <div className="setting-group">
-                    <label htmlFor="model">Model</label>
-                    <select
-                        id="model"
-                        value={model}
-                        onChange={(e) => setModel(e.target.value)}
-                    >
-                        {models.length > 0 ? (
-                            models.map((m) => (
-                                <option key={m.value} value={m.value}>
-                                    {m.label}
-                                </option>
-                            ))
-                        ) : (
-                            <>
-                                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast)</option>
-                                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                                <option value="gemini-pro">Gemini Pro</option>
-                            </>
-                        )}
-                    </select>
-                </div>
+//                 <div className="setting-group">
+//                     <label htmlFor="model">Model (All Free)</label>
+//                     <select
+//                         id="model"
+//                         value={model}
+//                         onChange={(e) => setModel(e.target.value)}
+//                     >
+//                         {models.length > 0 ? (
+//                             models.map((m) => (
+//                                 <option key={m.value} value={m.value}>
+//                                     {m.label}
+//                                 </option>
+//                             ))
+//                         ) : (
+//                             <>
+//                                 <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast)</option>
+//                                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+//                                 <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+//                                 <option value="gemini-pro">Gemini Pro</option>
+//                             </>
+//                         )}
+//                     </select>
+//                     <small>All models free with your API key. Free tier: 15 req/min, 1500 req/day</small>
+//                 </div>
 
-                <div className="setting-group">
-                    <label htmlFor="prefix">Command Prefix</label>
-                    <input
-                        id="prefix"
-                        type="text"
-                        value={commandPrefix}
-                        onChange={(e) => setCommandPrefix(e.target.value)}
-                        placeholder="prompt:"
-                    />
-                    <small>The prefix to trigger AI responses (e.g., "prompt:")</small>
-                </div>
+//                 <div className="setting-group">
+//                     <label htmlFor="prefix">Command Prefix</label>
+//                     <input
+//                         id="prefix"
+//                         type="text"
+//                         value={commandPrefix}
+//                         onChange={(e) => setCommandPrefix(e.target.value)}
+//                         placeholder="prompt:"
+//                     />
+//                     <small>The prefix to trigger AI responses (e.g., "prompt:")</small>
+//                 </div>
 
-                <div className="setting-group">
-                    <label>Response Format</label>
-                    <div className="radio-group">
-                        <label className="radio-option">
-                            <input
-                                type="radio"
-                                name="responseFormat"
-                                value="separate"
-                                checked={responseFormat === 'separate'}
-                                onChange={(e) => setResponseFormat(e.target.value)}
-                            />
-                            <span>Separate (send prompt, then generate and send response)</span>
-                        </label>
-                        <label className="radio-option">
-                            <input
-                                type="radio"
-                                name="responseFormat"
-                                value="edit"
-                                checked={responseFormat === 'edit'}
-                                onChange={(e) => setResponseFormat(e.target.value)}
-                            />
-                            <span>Edit (generate response only, no prompt sent)</span>
-                        </label>
-                        <label className="radio-option">
-                            <input
-                                type="radio"
-                                name="responseFormat"
-                                value="both"
-                                checked={responseFormat === 'both'}
-                                onChange={(e) => setResponseFormat(e.target.value)}
-                            />
-                            <span>Both (generate prompt + response in one message)</span>
-                        </label>
-                    </div>
-                </div>
+//                 <div className="setting-group">
+//                     <label>Response Format</label>
+//                     <div className="radio-group">
+//                         <label className="radio-option">
+//                             <input
+//                                 type="radio"
+//                                 name="responseFormat"
+//                                 value="edit"
+//                                 checked={responseFormat === 'edit'}
+//                                 onChange={(e) => setResponseFormat(e.target.value)}
+//                             />
+//                             <span>Edit (generate response only, no prompt sent)</span>
+//                         </label>
+//                         <label className="radio-option">
+//                             <input
+//                                 type="radio"
+//                                 name="responseFormat"
+//                                 value="both"
+//                                 checked={responseFormat === 'both'}
+//                                 onChange={(e) => setResponseFormat(e.target.value)}
+//                             />
+//                             <span>Both (generate prompt + response in one message)</span>
+//                         </label>
+//                     </div>
+//                 </div>
 
-                <div className="settings-actions">
-                    <button
-                        className="btn-primary"
-                        onClick={handleSave}
-                        disabled={saveStatus === 'saving'}
-                    >
-                        {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? '✓ Saved' : 'Save Settings'}
-                    </button>
-                    <button
-                        className="btn-secondary"
-                        onClick={handleReset}
-                    >
-                        Reset to Defaults
-                    </button>
-                </div>
+//                 <div className="settings-actions">
+//                     <button
+//                         className="btn-primary"
+//                         onClick={handleSave}
+//                         disabled={saveStatus === 'saving'}
+//                     >
+//                         {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'success' ? '✓ Saved' : 'Save Settings'}
+//                     </button>
+//                     <button
+//                         className="btn-secondary"
+//                         onClick={handleReset}
+//                     >
+//                         Reset to Defaults
+//                     </button>
+//                 </div>
 
-                {saveStatus === 'error' && (
-                    <div className="error-message">Failed to save settings. Please try again.</div>
-                )}
-            </div>
-        </div>
-    );
-}
+//                 {saveStatus === 'error' && (
+//                     <div className="error-message">Failed to save settings. Please try again.</div>
+//                 )}
+//             </div>
+//         </div>
+//     );
+// }
 
 function Popup() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<Tab>('tones');
+    const [activeTab, setActiveTab] = useState<Tab>('generate');
     const [showOnboarding, setShowOnboarding] = useState(false);
     const [settings, setSettings] = useState<any>({
-        apiKey: '',
-        model: 'gemini-2.5-flash',
-        commandPrefix: 'gemini:',
-        responseFormat: 'separate',
+        geminiApiKey: '',
+        openaiApiKey: '',
+        anthropicApiKey: '',
+        model: 'gemini-2.0-flash-exp',
+        commandPrefix: 'prompt:',
+        responseFormat: 'edit',
     });
     const [customTones, setCustomTones] = useState<any[]>([]);
     const [showCustomToneForm, setShowCustomToneForm] = useState(false);
@@ -855,6 +846,9 @@ function Popup() {
     const [newToneInstruction, setNewToneInstruction] = useState('');
     const [openChats, setOpenChats] = useState<any[]>([]);
     const [selectedChat, setSelectedChat] = useState<string | null>(null);
+    const [messagePrompt, setMessagePrompt] = useState('');
+    const [generatedMessage, setGeneratedMessage] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
 
     // Load selected preset and settings from storage on mount
     useEffect(() => {
@@ -944,6 +938,43 @@ function Popup() {
         setNewToneInstruction('');
     };
 
+    const handleGenerateMessage = async () => {
+        if (!messagePrompt.trim()) return;
+        setIsGenerating(true);
+        try {
+            const tone = selectedId ? allTones.find(t => t.id === selectedId) : null;
+            const systemInstruction = tone?.systemInstruction || 'You are a helpful AI assistant.';
+            const response = await chrome.runtime.sendMessage({
+                type: 'GENERATE_RESPONSE',
+                prompt: messagePrompt,
+                systemInstruction: systemInstruction,
+            });
+            if (response?.success) {
+                setGeneratedMessage(response.text);
+            }
+        } catch (error) {
+            console.error('Generation error:', error);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleSaveAsTemplate = () => {
+        if (!generatedMessage) return;
+        chrome.storage.local.get(['templates'], (result: any) => {
+            const templates = result.templates || [];
+            templates.push({
+                id: Date.now().toString(),
+                name: messagePrompt.substring(0, 30) + '...',
+                content: generatedMessage,
+            });
+            chrome.storage.local.set({ templates }, () => {
+                alert('Template saved!');
+                setActiveTab('templates');
+            });
+        });
+    };
+
     const allTones = [...TONES, ...customTones];
 
     // Get current tone label
@@ -952,7 +983,7 @@ function Popup() {
     return (
         <div className="popup-container">
             <GlobalStyles />
-            
+
             {showOnboarding && (
                 <div className="onboarding-overlay">
                     <div className="onboarding-modal">
@@ -988,7 +1019,7 @@ function Popup() {
                     </div>
                 </div>
             )}
-            
+
             <div className="popup-header">
                 <div className="header-top">
                     <div className="header-left">
@@ -1001,7 +1032,7 @@ function Popup() {
                         {currentTone && (
                             <div
                                 className="tone-indicator"
-                                onClick={() => setActiveTab('tones')}
+                                onClick={() => setActiveTab('generate')}
                                 title="Click to change tone"
                             >
                                 <span className="tone-indicator-label">Current:</span>
@@ -1045,11 +1076,11 @@ function Popup() {
 
             <div className="popup-tabs">
                 <button
-                    className={`tab-btn ${activeTab === 'tones' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('tones')}
+                    className={`tab-btn ${activeTab === 'generate' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('generate')}
                 >
-                    <Palette size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
-                    <span>Tones</span>
+                    <Bot size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                    <span>Generate</span>
                 </button>
                 <button
                     className={`tab-btn ${activeTab === 'commands' ? 'active' : ''}`}
@@ -1089,7 +1120,7 @@ function Popup() {
             </div>
 
             <div className="popup-content">
-                {activeTab === 'tones' && (
+                {activeTab === 'generate' && (
                     <>
                         <p className="instructions">Select a tone for AI responses:</p>
                         <div className="presets-grid">
@@ -1128,8 +1159,36 @@ function Popup() {
                                 </div>
                             </div>
                         )}
+                        <div style={{ marginTop: '20px', padding: '16px', background: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                            <h3 style={{ margin: '0 0 12px 0', fontSize: '15px' }}>Generate Message</h3>
+                            <textarea
+                                placeholder="Describe the message you want to generate..."
+                                value={messagePrompt}
+                                onChange={(e) => setMessagePrompt(e.target.value)}
+                                style={{ width: '100%', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '6px', minHeight: '80px', fontSize: '13px', marginBottom: '10px' }}
+                            />
+                            <button
+                                className="btn-primary"
+                                onClick={handleGenerateMessage}
+                                disabled={isGenerating || !messagePrompt.trim()}
+                                style={{ marginBottom: '10px' }}
+                            >
+                                {isGenerating ? 'Generating...' : 'Generate'}
+                            </button>
+                            {generatedMessage && (
+                                <div style={{ marginTop: '12px' }}>
+                                    <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '6px', marginBottom: '10px', fontSize: '13px', whiteSpace: 'pre-wrap' }}>
+                                        {generatedMessage}
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button className="btn-primary" onClick={handleSaveAsTemplate}>Save as Template</button>
+                                        <button className="btn-secondary" onClick={() => navigator.clipboard.writeText(generatedMessage)}>Copy</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                         <div className="footer">
-                            <p className="tip">💡 Type <code>{settings.commandPrefix || 'gemini:'} your prompt</code> in chat</p>
+                            <p className="tip">💡 Type <code>{settings.commandPrefix || 'prompt:'} your prompt</code> in chat</p>
                         </div>
                     </>
                 )}
