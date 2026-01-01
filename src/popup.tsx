@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './popup.css';
 import TemplatesTab from './TemplatesTab';
 import SettingsTab from './SettingsTab';
-import { Bot, Terminal, History, FileText, Settings, RefreshCw, Copy, Plus } from 'lucide-react';
+import { Bot, History, FileText, Settings, RefreshCw, Copy, Plus } from 'lucide-react';
 
 const GlobalStyles = () => (
     <style>{`
@@ -823,6 +823,7 @@ function Popup() {
     const [messagePrompt, setMessagePrompt] = useState('');
     const [generatedMessage, setGeneratedMessage] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [generateError, setGenerateError] = useState('');
 
     // Load selected preset and settings from storage on mount
     useEffect(() => {
@@ -915,6 +916,8 @@ function Popup() {
     const handleGenerateMessage = async () => {
         if (!messagePrompt.trim()) return;
         setIsGenerating(true);
+        setGenerateError('');
+        setGeneratedMessage('');
         try {
             const tone = selectedId ? allTones.find(t => t.id === selectedId) : null;
             const systemInstruction = tone?.systemInstruction || 'You are a helpful AI assistant.';
@@ -925,9 +928,11 @@ function Popup() {
             });
             if (response?.success) {
                 setGeneratedMessage(response.text);
+            } else {
+                setGenerateError(response?.error || 'Failed to generate message');
             }
-        } catch (error) {
-            console.error('Generation error:', error);
+        } catch (error: any) {
+            setGenerateError(error?.message || 'An error occurred');
         } finally {
             setIsGenerating(false);
         }
@@ -1149,6 +1154,11 @@ function Popup() {
                             >
                                 {isGenerating ? 'Generating...' : 'Generate'}
                             </button>
+                            {generateError && (
+                                <div style={{ marginTop: '12px', padding: '12px', background: '#fee', border: '1px solid #fcc', borderRadius: '6px', color: '#c00', fontSize: '13px' }}>
+                                    {generateError}
+                                </div>
+                            )}
                             {generatedMessage && (
                                 <div style={{ marginTop: '12px' }}>
                                     <div style={{ padding: '12px', background: '#f9fafb', borderRadius: '6px', marginBottom: '10px', fontSize: '13px', whiteSpace: 'pre-wrap' }}>

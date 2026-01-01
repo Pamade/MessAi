@@ -263,14 +263,29 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
     const target = event.target as HTMLElement;
     if (!target.isContentEditable) return;
 
-    // 2. Pobieramy tekst (zachowujemy go w zmiennej, żeby potem dokleić)
+    await handleMessageGeneration(target, event);
+}, true);
+
+document.addEventListener('click', async (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+    const sendButton = target.closest('[aria-label*="Enter"], [aria-label*="enter"], [data-testid="send-button"]');
+
+    if (!sendButton) return;
+
+    const editableElement = document.querySelector('[contenteditable="true"]') as HTMLElement;
+    if (!editableElement) return;
+
+    await handleMessageGeneration(editableElement, event);
+}, true);
+
+async function handleMessageGeneration(target: HTMLElement, event: Event) {
     const messageText = target.innerText.trim();
 
-    // 3. Check for AI prefix
+    // Check for AI prefix
     const prefix = settings.commandPrefix || 'prompt:';
     if (!messageText.toLowerCase().startsWith(prefix.toLowerCase()) && !messageText.startsWith('gpt:')) return;
 
-    // 4. Blokujemy Enter
+    // Block the event
     event.preventDefault();
     event.stopImmediatePropagation();
 
@@ -284,10 +299,8 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
     try {
         const responseFormat = settings.responseFormat || 'edit';
 
-        // Show loading overlay
         showLoadingOverlay();
 
-        // Generate response
         const response = await safeSendMessage({
             type: 'GENERATE_RESPONSE',
             prompt: prompt,
@@ -304,14 +317,17 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
             } else if (responseFormat === 'both') {
                 await replaceTextInEditor(target, `[${messageText}] : \n\n${response.text}`);
             }
+        } else {
+            showErrorNotification(response?.error || 'Failed to generate response');
         }
     } catch (error: any) {
         hideLoadingOverlay();
         console.error('Content Script Error:', error);
+        showErrorNotification(error?.message || 'Failed to generate response');
     } finally {
         isProcessing = false;
     }
-}, true);
+}
 
 
 /**
@@ -399,4 +415,37 @@ function hideLoadingOverlay() {
     if (overlay) {
         overlay.remove();
     }
+}
+
+function showErrorNotification(message: string) {
+    const notification = document.createElement('div');
+    notification.id = 'ai-error-notification';
+    notification.innerHTML = `
+        <div style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #fee;
+            border: 2px solid #fcc;
+            color: #c00;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 999999;
+            max-width: 400px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            animation: slideIn 0.3s ease-out;
+        ">
+            <strong>Error:</strong> ${message}
+        </div>
+        <style>
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        </style>
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 5000);
 }
