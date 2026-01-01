@@ -144,11 +144,152 @@ const GlobalStyles = () => (
             display: flex;
             gap: 10px;
         }
+
+        /* Onboarding */
+        .onboarding-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .onboarding-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .onboarding-modal h2 {
+            margin: 0 0 24px 0;
+            color: #1a1a1a;
+            text-align: center;
+        }
+
+        .onboarding-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .onboarding-step {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            background: #2563eb;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .step-content h3 {
+            margin: 0 0 4px 0;
+            font-size: 16px;
+            color: #1a1a1a;
+        }
+
+        .step-content p {
+            margin: 0;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .step-content .example {
+            margin-top: 8px;
+            padding: 8px;
+            background: #f3f4f6;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .onboarding-btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+        }
+
+        /* Guide Tab */
+        .guide-tab {
+            padding: 0;
+        }
+
+        .guide-tab h3 {
+            margin: 0 0 20px 0;
+            color: #1a1a1a;
+            font-size: 20px;
+        }
+
+        .guide-tab h4 {
+            margin: 0 0 12px 0;
+            color: #2563eb;
+            font-size: 16px;
+        }
+
+        .guide-section {
+            margin-bottom: 24px;
+            padding: 16px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+
+        .guide-section ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .guide-section li {
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        .guide-section ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .format-example, .command-example {
+            padding: 8px 12px;
+            background: #f9fafb;
+            border-left: 3px solid #2563eb;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .example-box {
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .example-box:last-child {
+            margin-bottom: 0;
+        }
     `}</style>
 );
 
 
-type Tab = 'tones' | 'commands' | 'settings' | 'history' | 'templates';
+type Tab = 'tones' | 'commands' | 'settings' | 'history' | 'templates' | 'guide';
 
 const TONES = [
     { id: 'default', label: 'Default', description: 'Balanced, helpful, clear', systemInstruction: 'You are a helpful, balanced AI assistant. Respond clearly and accurately.' },
@@ -174,6 +315,71 @@ const COMMANDS = [
         notes: 'Valid tones: default, honest, friendly, weird, nerd, cynic',
     }
 ];
+
+function GuideTab() {
+    return (
+        <div className="guide-tab">
+            <h3>🚀 Quick Start Guide</h3>
+            
+            <div className="guide-section">
+                <h4>How to Use</h4>
+                <ol>
+                    <li>Open Facebook Messenger chat</li>
+                    <li>Type <code>prompt: your message</code> in the chat input</li>
+                    <li>Press Enter - AI will generate a response</li>
+                    <li>Review and send the generated message</li>
+                </ol>
+            </div>
+
+            <div className="guide-section">
+                <h4>Response Formats</h4>
+                <div className="format-example">
+                    <strong>Separate:</strong> Sends your prompt first, then generates response
+                </div>
+                <div className="format-example">
+                    <strong>Edit:</strong> Only generates response (no prompt sent)
+                </div>
+                <div className="format-example">
+                    <strong>Both:</strong> Combines prompt + response in one message
+                </div>
+            </div>
+
+            <div className="guide-section">
+                <h4>Commands</h4>
+                <div className="command-example">
+                    <code>/tone friendly</code> - Change AI tone
+                </div>
+                <div className="command-example">
+                    <code>/help</code> - Show available commands
+                </div>
+            </div>
+
+            <div className="guide-section">
+                <h4>Examples</h4>
+                <div className="example-box">
+                    <strong>Example 1:</strong><br/>
+                    Type: <code>prompt: write a professional thank you message</code><br/>
+                    Result: AI generates a professional thank you message
+                </div>
+                <div className="example-box">
+                    <strong>Example 2:</strong><br/>
+                    Type: <code>prompt: make this friendlier: I need the report by tomorrow</code><br/>
+                    Result: AI rewrites in a friendly tone
+                </div>
+            </div>
+
+            <div className="guide-section">
+                <h4>Tips</h4>
+                <ul>
+                    <li>Select a tone before generating for better results</li>
+                    <li>Use templates for frequently used messages</li>
+                    <li>Check history to reuse previous prompts</li>
+                    <li>Create custom tones for specific use cases</li>
+                </ul>
+            </div>
+        </div>
+    );
+}
 
 function CommandsTab() {
     const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
@@ -636,6 +842,7 @@ function SettingsTab({ settings, onSettingsChange }: SettingsTabProps) {
 function Popup() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<Tab>('tones');
+    const [showOnboarding, setShowOnboarding] = useState(false);
     const [settings, setSettings] = useState<any>({
         apiKey: '',
         model: 'gemini-2.5-flash',
@@ -651,12 +858,15 @@ function Popup() {
 
     // Load selected preset and settings from storage on mount
     useEffect(() => {
-        chrome.storage.local.get(['selectedPresetId', 'customTones'], (result: any) => {
+        chrome.storage.local.get(['selectedPresetId', 'customTones', 'onboardingShown'], (result: any) => {
             if (result.selectedPresetId) {
                 setSelectedId(result.selectedPresetId);
             }
             if (result.customTones) {
                 setCustomTones(result.customTones);
+            }
+            if (!result.onboardingShown) {
+                setShowOnboarding(true);
             }
         });
 
@@ -742,6 +952,43 @@ function Popup() {
     return (
         <div className="popup-container">
             <GlobalStyles />
+            
+            {showOnboarding && (
+                <div className="onboarding-overlay">
+                    <div className="onboarding-modal">
+                        <h2>🎉 Welcome to Messenger AI!</h2>
+                        <div className="onboarding-steps">
+                            <div className="onboarding-step">
+                                <div className="step-number">1</div>
+                                <div className="step-content">
+                                    <h3>Open Facebook Messenger</h3>
+                                    <p>Go to any chat conversation</p>
+                                </div>
+                            </div>
+                            <div className="onboarding-step">
+                                <div className="step-number">2</div>
+                                <div className="step-content">
+                                    <h3>Type your prompt</h3>
+                                    <p>Start with <code>prompt:</code> followed by your message</p>
+                                    <div className="example">Example: <code>prompt: write a thank you message</code></div>
+                                </div>
+                            </div>
+                            <div className="onboarding-step">
+                                <div className="step-number">3</div>
+                                <div className="step-content">
+                                    <h3>Press Enter</h3>
+                                    <p>AI generates a response for you to review and send</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button className="btn-primary onboarding-btn" onClick={() => {
+                            chrome.storage.local.set({ onboardingShown: true });
+                            setShowOnboarding(false);
+                        }}>Got it!</button>
+                    </div>
+                </div>
+            )}
+            
             <div className="popup-header">
                 <div className="header-top">
                     <div className="header-left">
@@ -812,6 +1059,13 @@ function Popup() {
                     <span>Commands</span>
                 </button>
                 <button
+                    className={`tab-btn ${activeTab === 'guide' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('guide')}
+                >
+                    <FileText size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                    <span>Guide</span>
+                </button>
+                <button
                     className={`tab-btn ${activeTab === 'templates' ? 'active' : ''}`}
                     onClick={() => setActiveTab('templates')}
                 >
@@ -879,6 +1133,8 @@ function Popup() {
                         </div>
                     </>
                 )}
+
+                {activeTab === 'guide' && <GuideTab />}
 
                 {activeTab === 'commands' && <CommandsTab />}
 

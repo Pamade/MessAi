@@ -416,12 +416,15 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
 
         if (responseFormat === 'separate') {
             // Send original message with prefix first, BEFORE generating
-            // await replaceTextInEditor(target, messageText);
-            await safeSendMessage(messageText)
+            await replaceTextInEditor(target, messageText);
             await sleep(100);
-            const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true, cancelable: true });
-            target.dispatchEvent(enterEvent);
-            await sleep(800);
+            
+            // Simulate Enter key press to send
+            target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+            target.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+            target.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true }));
+            
+            await sleep(1000);
 
             // Show loading overlay
             showLoadingOverlay();
@@ -439,8 +442,8 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
                 savePromptToHistory(prompt, response.text);
                 await replaceTextInEditor(target, response.text);
             } else {
-                console.error('Błąd z background:', response);
-                await replaceTextInEditor(target, `❌ Błąd: ${response?.error || 'Brak odpowiedzi API'}`);
+                console.error('Error from background:', response);
+                await replaceTextInEditor(target, `❌ Error: ${response?.error || 'No API response'}`);
             }
         } else {
             // Show loading overlay
@@ -463,23 +466,23 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
                     await replaceTextInEditor(target, response.text);
                 } else if (responseFormat === 'both') {
                     // Original message + response in one message
-                    await replaceTextInEditor(target, `[${messageText}] \n\n ${response.text}`);
+                    await replaceTextInEditor(target, `${messageText}\n\n${response.text}`);
                 }
             } else {
-                console.error('Błąd z background:', response);
-                await replaceTextInEditor(target, `❌ Błąd: ${response?.error || 'Brak odpowiedzi API'}`);
+                console.error('Error from background:', response);
+                await replaceTextInEditor(target, `❌ Error: ${response?.error || 'No API response'}`);
             }
         }
     } catch (error: any) {
         hideLoadingOverlay();
-        console.error('Błąd Content Script:', error);
+        console.error('Content Script Error:', error);
         const errorMessage = error.message || 'Unknown error';
 
         if (errorMessage.includes('Extension context invalidated') ||
             errorMessage.includes('Extension was reloaded')) {
             await replaceTextInEditor(target, `⚠️ Extension was reloaded. Please refresh this page (F5) to continue.`);
         } else {
-            await replaceTextInEditor(target, `❌ Błąd: ${errorMessage}`);
+            await replaceTextInEditor(target, `❌ Error: ${errorMessage}`);
         }
     } finally {
         isProcessing = false;

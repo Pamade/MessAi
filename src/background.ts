@@ -48,7 +48,7 @@ function createPopupWindow() {
         {
             url: 'popup.html',
             type: 'popup',
-            width: 499,
+            width: 1000,
             height: 700,
         },
         (window) => {

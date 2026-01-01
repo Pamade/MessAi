@@ -7,16 +7,15 @@
 }
 
 html {
-    background: #fafafa;
+    background: #ffffff;
 }
 
 html,
 body {
     width: 100%;
-    min-width: 400px;
-    max-width: 1000px;
     height: 100vh;
-    margin: 0 auto;
+    margin: 0;
+    padding: 0;
     overflow: hidden;
 }
 
@@ -25,7 +24,6 @@ body {
     font-size: 14px;
     color: #1a1a1a;
     background: #ffffff;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
 }
 
 .popup-container {
@@ -40,10 +38,11 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 16px 20px;
+    padding: 12px 16px;
     background: #2563eb;
     color: white;
     border-bottom: 1px solid #1e40af;
+    flex-shrink: 0;
 }
 
 .header-top {
@@ -97,9 +96,15 @@ body {
 }
 
 .popup-header h1 {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     margin: 0;
+}
+
+@media (min-width: 500px) {
+    .popup-header h1 {
+        font-size: 18px;
+    }
 }
 
 .tone-indicator {
@@ -167,9 +172,16 @@ body {
 
 .popup-content {
     flex: 1;
-    padding: 20px;
+    padding: 16px;
     overflow-y: auto;
     background: #fafafa;
+    min-height: 0;
+}
+
+@media (min-width: 500px) {
+    .popup-content {
+        padding: 20px;
+    }
 }
 
 .instructions {
@@ -180,9 +192,15 @@ body {
 
 .presets-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 8px;
     margin-bottom: 16px;
+}
+
+@media (min-width: 500px) {
+    .presets-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
 }
 
 .preset-btn {
@@ -290,27 +308,36 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 14px 8px;
+    padding: 12px 4px;
     border: none;
     background: transparent;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     color: #6b7280;
     transition: all 0.2s;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
-    gap: 6px;
+    gap: 4px;
+    min-width: 0;
+}
+
+.tab-btn svg {
+    flex-shrink: 0;
 }
 
 .tab-btn span {
     display: none;
+    white-space: nowrap;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 500px) {
     .tab-btn {
-        padding: 14px 16px;
+        padding: 14px 8px;
+        font-size: 13px;
+        gap: 6px;
     }
+
     .tab-btn span {
         display: inline;
     }
