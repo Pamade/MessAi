@@ -6,11 +6,16 @@
     box-sizing: border-box;
 }
 
+html {
+    background: #fafafa;
+}
+
 html,
 body {
-    width: 600px;
-    height: 100vh;
+    width: 100%;
+    min-width: 400px;
     max-width: 1000px;
+    height: 100vh;
     margin: 0 auto;
     overflow: hidden;
 }
@@ -20,6 +25,7 @@ body {
     font-size: 14px;
     color: #1a1a1a;
     background: #ffffff;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
 }
 
 .popup-container {
@@ -174,7 +180,7 @@ body {
 
 .presets-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 8px;
     margin-bottom: 16px;
 }
@@ -282,10 +288,9 @@ body {
 .tab-btn {
     flex: 1;
     display: flex;
-    /* justify-content: space-between; */
     align-items: center;
-    /* flex-direction: column; */
-    padding: 14px 16px;
+    justify-content: center;
+    padding: 14px 8px;
     border: none;
     background: transparent;
     cursor: pointer;
@@ -295,7 +300,20 @@ body {
     transition: all 0.2s;
     border-bottom: 2px solid transparent;
     margin-bottom: -1px;
+    gap: 6px;
+}
 
+.tab-btn span {
+    display: none;
+}
+
+@media (min-width: 600px) {
+    .tab-btn {
+        padding: 14px 16px;
+    }
+    .tab-btn span {
+        display: inline;
+    }
 }
 
 .tab-btn:hover {

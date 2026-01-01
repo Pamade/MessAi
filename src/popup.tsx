@@ -584,7 +584,7 @@ function SettingsTab({ settings, onSettingsChange }: SettingsTabProps) {
                                 checked={responseFormat === 'separate'}
                                 onChange={(e) => setResponseFormat(e.target.value)}
                             />
-                            <span>Separate message (send original + AI response)</span>
+                            <span>Separate (send prompt, then generate and send response)</span>
                         </label>
                         <label className="radio-option">
                             <input
@@ -594,7 +594,7 @@ function SettingsTab({ settings, onSettingsChange }: SettingsTabProps) {
                                 checked={responseFormat === 'edit'}
                                 onChange={(e) => setResponseFormat(e.target.value)}
                             />
-                            <span>Edit original (replace command with response)</span>
+                            <span>Edit (generate response only, no prompt sent)</span>
                         </label>
                         <label className="radio-option">
                             <input
@@ -604,7 +604,7 @@ function SettingsTab({ settings, onSettingsChange }: SettingsTabProps) {
                                 checked={responseFormat === 'both'}
                                 onChange={(e) => setResponseFormat(e.target.value)}
                             />
-                            <span>Both (send original, then response)</span>
+                            <span>Both (generate prompt + response in one message)</span>
                         </label>
                     </div>
                 </div>
@@ -701,17 +701,20 @@ function Popup() {
         setSelectedId(id);
         chrome.storage.local.set({ selectedPresetId: id });
 
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-            if (tabs[0]?.id) {
-                chrome.tabs.sendMessage(tabs[0].id, {
-                    type: 'UPDATE_SYSTEM_INSTRUCTION',
-                    presetId: id,
-                }, () => {
-                    if (chrome.runtime.lastError) {
-                        // Silently ignore - content script may not be loaded
-                    }
-                });
-            }
+        // Send to all Facebook tabs
+        chrome.tabs.query({ url: ['https://*.facebook.com/*', 'https://*.messenger.com/*'] }, (tabs) => {
+            tabs.forEach(tab => {
+                if (tab.id) {
+                    chrome.tabs.sendMessage(tab.id, {
+                        type: 'UPDATE_SYSTEM_INSTRUCTION',
+                        presetId: id,
+                    }, () => {
+                        if (chrome.runtime.lastError) {
+                            // Silently ignore
+                        }
+                    });
+                }
+            });
         });
     };
 

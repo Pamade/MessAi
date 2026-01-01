@@ -223,7 +223,7 @@ try {
                     }, {});
                     TONE_MAP = { ...TONE_MAP, ...customTonesMap };
                 }
-                
+
                 systemInstruction = TONE_MAP[request.presetId] || 'You are a helpful AI assistant.';
                 currentToneName = request.presetId || 'default';
                 console.log(`✅ Tone updated: ${request.presetId}`);
@@ -412,29 +412,63 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
     console.log(`🤖 Przetwarzam prompt: ${prompt}`);
 
     try {
-        // Show loading overlay
-        showLoadingOverlay();
+        const responseFormat = settings.responseFormat || 'separate';
 
-        // Send to Background Script
-        const response = await safeSendMessage({
-            type: 'GENERATE_RESPONSE',
-            prompt: prompt,
-            systemInstruction: systemInstruction,
-        });
+        if (responseFormat === 'separate') {
+            // Send original message with prefix first, BEFORE generating
+            // await replaceTextInEditor(target, messageText);
+            await safeSendMessage(messageText)
+            await sleep(100);
+            const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true, cancelable: true });
+            target.dispatchEvent(enterEvent);
+            await sleep(800);
 
-        // Hide loading overlay
-        hideLoadingOverlay();
+            // Show loading overlay
+            showLoadingOverlay();
 
-        // Check result
-        if (response && response.success) {
-            // Save to history
-            savePromptToHistory(prompt, response.text);
+            // Generate response
+            const response = await safeSendMessage({
+                type: 'GENERATE_RESPONSE',
+                prompt: prompt,
+                systemInstruction: systemInstruction,
+            });
 
-            // Replace text in editor but DON'T send
-            await replaceTextInEditor(target, response.text);
+            hideLoadingOverlay();
+
+            if (response && response.success) {
+                savePromptToHistory(prompt, response.text);
+                await replaceTextInEditor(target, response.text);
+            } else {
+                console.error('Błąd z background:', response);
+                await replaceTextInEditor(target, `❌ Błąd: ${response?.error || 'Brak odpowiedzi API'}`);
+            }
         } else {
-            console.error('Błąd z background:', response);
-            await replaceTextInEditor(target, `❌ Błąd: ${response?.error || 'Brak odpowiedzi API'}`);
+            // Show loading overlay
+            showLoadingOverlay();
+
+            // Generate response
+            const response = await safeSendMessage({
+                type: 'GENERATE_RESPONSE',
+                prompt: prompt,
+                systemInstruction: systemInstruction,
+            });
+
+            hideLoadingOverlay();
+
+            if (response && response.success) {
+                savePromptToHistory(prompt, response.text);
+
+                if (responseFormat === 'edit') {
+                    // Only response, no prompt
+                    await replaceTextInEditor(target, response.text);
+                } else if (responseFormat === 'both') {
+                    // Original message + response in one message
+                    await replaceTextInEditor(target, `[${messageText}] \n\n ${response.text}`);
+                }
+            } else {
+                console.error('Błąd z background:', response);
+                await replaceTextInEditor(target, `❌ Błąd: ${response?.error || 'Brak odpowiedzi API'}`);
+            }
         }
     } catch (error: any) {
         hideLoadingOverlay();
