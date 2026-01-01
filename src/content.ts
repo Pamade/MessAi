@@ -24,15 +24,6 @@ function loadSettings() {
 // Load settings on initialization
 loadSettings();
 
-// Command help text
-const COMMAND_HELP = `Available Commands:
-
-/help - Show this help message
-/tone <name> - Change AI response tone (default, honest, friendly, weird, nerd, cynic)
-/settings - Open extension settings (click extension icon)
-
-Example: /tone friendly`;
-
 // Tone map for command usage
 let TONE_MAP: { [key: string]: string } = {
     'default': 'You are a helpful, balanced AI assistant. Respond clearly and accurately.',
@@ -93,64 +84,7 @@ function savePromptToHistory(prompt: string, response?: string) {
     }
 }
 
-// Parse command from message text
-function parseCommand(messageText: string): { command: string; args: string[] } | null {
-    const trimmed = messageText.trim();
-    if (!trimmed.startsWith('/')) return null;
 
-    const parts = trimmed.split(/\s+/);
-    const command = parts[0].toLowerCase();
-    const args = parts.slice(1);
-
-    return { command, args };
-}
-
-// Handle /help command
-async function handleHelpCommand(target: HTMLElement) {
-    await replaceTextInEditor(target, COMMAND_HELP);
-    // Don't send the message, just show it
-}
-
-// Handle /tone command
-async function handleToneCommand(target: HTMLElement, args: string[]) {
-    if (args.length === 0) {
-        await replaceTextInEditor(target, '❌ Usage: /tone <name>\nValid tones: default, honest, friendly, weird, nerd, cynic');
-        return;
-    }
-
-    const toneName = args[0].toLowerCase();
-    if (!TONE_MAP[toneName]) {
-        await replaceTextInEditor(target, `❌ Invalid tone: ${args[0]}\nValid tones: default, honest, friendly, weird, nerd, cynic`);
-        return;
-    }
-
-    systemInstruction = TONE_MAP[toneName];
-    currentToneName = toneName;
-    await replaceTextInEditor(target, `✅ Tone changed to: ${toneName}`);
-
-    // Also update via message to sync with popup
-    try {
-        await safeSendMessage({
-            type: 'UPDATE_SYSTEM_INSTRUCTION',
-            presetId: toneName,
-        });
-
-        // Notify popup about tone change
-        chrome.runtime.sendMessage({
-            type: 'TONE_UPDATED',
-            presetId: toneName,
-        }).catch(() => {
-            // Silently fail if popup not open
-        });
-    } catch (e) {
-        // Silently fail
-    }
-}
-
-// Handle /settings command
-async function handleSettingsCommand(target: HTMLElement) {
-    await replaceTextInEditor(target, '⚙️ Click the extension icon to open settings');
-}
 
 // Helper function to check if extension context is valid
 function isExtensionContextValid(): boolean {
@@ -300,38 +234,6 @@ try {
                 sendResponse({ success: true });
             });
             return true; // Async response
-        } else if (request.type === 'EXECUTE_COMMAND') {
-            // Find the active content editable element and type the command
-            const command = request.command;
-            const activeElement = document.activeElement as HTMLElement;
-            let target: HTMLElement | null = null;
-
-            if (activeElement && activeElement.isContentEditable) {
-                target = activeElement;
-            } else {
-                // Try to find any content editable element (Messenger chat input)
-                const editable = document.querySelector('[contenteditable="true"]') as HTMLElement;
-                if (editable) {
-                    target = editable;
-                }
-            }
-
-            if (target) {
-                target.focus();
-                target.innerText = command;
-                // Trigger Enter key to execute
-                setTimeout(() => {
-                    const enterEvent = new KeyboardEvent('keydown', {
-                        key: 'Enter',
-                        keyCode: 13,
-                        bubbles: true,
-                        cancelable: true
-                    });
-                    target!.dispatchEvent(enterEvent);
-                }, 100);
-            }
-
-            sendResponse({ success: true });
         }
     });
 } catch (error) {
@@ -364,50 +266,18 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
     // 2. Pobieramy tekst (zachowujemy go w zmiennej, żeby potem dokleić)
     const messageText = target.innerText.trim();
 
-    // 3. Check for commands first (commands start with /)
-    const command = parseCommand(messageText);
-    if (command) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-
-        if (isProcessing) return;
-        isProcessing = true;
-
-        try {
-            switch (command.command) {
-                case '/help':
-                    await handleHelpCommand(target);
-                    break;
-                case '/tone':
-                    await handleToneCommand(target, command.args);
-                    break;
-                case '/settings':
-                    await handleSettingsCommand(target);
-                    break;
-                default:
-                    await replaceTextInEditor(target, `❌ Unknown command: ${command.command}\nType /help for available commands`);
-            }
-        } catch (error: any) {
-            console.error('Command error:', error);
-            await replaceTextInEditor(target, `❌ Error: ${error.message}`);
-        } finally {
-            isProcessing = false;
-        }
-        return;
-    }
-
-    // 4. Check for AI prefix (gemini: or custom prefix)
+    // 3. Check for AI prefix
     const prefix = settings.commandPrefix || 'prompt:';
     if (!messageText.toLowerCase().startsWith(prefix.toLowerCase()) && !messageText.startsWith('gpt:')) return;
 
-    // 5. Blokujemy Enter
+    // 4. Blokujemy Enter
     event.preventDefault();
     event.stopImmediatePropagation();
 
     if (isProcessing) return;
     isProcessing = true;
 
-    const prompt = messageText.replace(new RegExp(`^(${prefix}|gpt:)\\s*`, 'i'), '').trim();
+    const prompt = messageText.replace(new RegExp(`^(${prefix}|gpt:)\\s*`, 'i'), '').trim() + "; Do not use markdowns.";
 
     console.log(`🤖 Przetwarzam prompt: ${prompt}`);
 
@@ -430,27 +300,14 @@ document.addEventListener('keydown', async (event: KeyboardEvent) => {
             savePromptToHistory(prompt, response.text);
 
             if (responseFormat === 'edit') {
-                // Only response, no prompt
                 await replaceTextInEditor(target, response.text);
             } else if (responseFormat === 'both') {
-                // Original message + response in one message
                 await replaceTextInEditor(target, `[${messageText}] : \n\n${response.text}`);
             }
-        } else {
-            console.error('Error from background:', response);
-            await replaceTextInEditor(target, `❌ Error: ${response?.error || 'No API response'}`);
         }
     } catch (error: any) {
         hideLoadingOverlay();
         console.error('Content Script Error:', error);
-        const errorMessage = error.message || 'Unknown error';
-
-        if (errorMessage.includes('Extension context invalidated') ||
-            errorMessage.includes('Extension was reloaded')) {
-            await replaceTextInEditor(target, `⚠️ Extension was reloaded. Please refresh this page (F5) to continue.`);
-        } else {
-            await replaceTextInEditor(target, `❌ Error: ${errorMessage}`);
-        }
     } finally {
         isProcessing = false;
     }

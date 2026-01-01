@@ -301,22 +301,6 @@ const TONES = [
     { id: 'cynic', label: 'Cynic', description: 'Skeptical, sarcastic, critical', systemInstruction: 'You are a cynical AI assistant. Be skeptical, sarcastic, and critically minded.' },
 ];
 
-const COMMANDS = [
-    {
-        command: '/help',
-        description: 'Show all available commands',
-        usage: '/help',
-        example: '/help',
-    },
-    {
-        command: '/tone <name>',
-        description: 'Change AI response tone',
-        usage: '/tone <tone_name>',
-        example: '/tone friendly',
-        notes: 'Valid tones: default, honest, friendly, weird, nerd, cynic',
-    }
-];
-
 function GuideTab() {
     return (
         <div className="guide-tab">
@@ -339,16 +323,6 @@ function GuideTab() {
                 </div>
                 <div className="format-example">
                     <strong>Both:</strong> Combines prompt + response in one message
-                </div>
-            </div>
-
-            <div className="guide-section">
-                <h4>Commands</h4>
-                <div className="command-example">
-                    <code>/tone friendly</code> - Change AI tone
-                </div>
-                <div className="command-example">
-                    <code>/help</code> - Show available commands
                 </div>
             </div>
 
@@ -379,88 +353,88 @@ function GuideTab() {
     );
 }
 
-function CommandsTab() {
-    const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
+// function CommandsTab() {
+//     const [expandedCommand, setExpandedCommand] = useState<string | null>(null);
 
-    const toggleExpand = (command: string) => {
-        if (expandedCommand === command) {
-            setExpandedCommand(null);
-        } else {
-            setExpandedCommand(command);
-        }
-    };
+//     const toggleExpand = (command: string) => {
+//         if (expandedCommand === command) {
+//             setExpandedCommand(null);
+//         } else {
+//             setExpandedCommand(command);
+//         }
+//     };
 
-    const getHelpContent = () => {
-        return `Available Commands:
+//     const getHelpContent = () => {
+//         return `Available Commands:
 
-/help - Show this help message
-/tone <name> - Change AI response tone (default, honest, friendly, weird, nerd, cynic)
-/settings - Open extension settings (click extension icon)
+// /help - Show this help message
+// /tone <name> - Change AI response tone (default, honest, friendly, weird, nerd, cynic)
+// /settings - Open extension settings (click extension icon)
 
-Example: /tone friendly`;
-    };
+// Example: /tone friendly`;
+//     };
 
-    return (
-        <div className="commands-tab">
-            <p className="instructions">Click a command to see details or use it in Messenger chat:</p>
-            <div className="commands-list">
-                <div
-                    className={`command-item clickable ${expandedCommand === '/help' ? 'expanded' : ''}`}
-                    onClick={() => toggleExpand('/help')}
-                >
-                    <div className="command-header">
-                        <code className="command-name">/help</code>
-                    </div>
-                    <div className="command-description">{COMMANDS[0].description}</div>
-                    {expandedCommand === '/help' && (
-                        <div className="command-help-content">
-                            <pre>{getHelpContent()}</pre>
-                        </div>
-                    )}
-                    <div className="command-example">
-                        <strong>Example:</strong> <code>{COMMANDS[0].example}</code>
-                    </div>
-                </div>
+//     return (
+//         <div className="commands-tab">
+//             <p className="instructions">Click a command to see details or use it in Messenger chat:</p>
+//             <div className="commands-list">
+//                 <div
+//                     className={`command-item clickable ${expandedCommand === '/help' ? 'expanded' : ''}`}
+//                     onClick={() => toggleExpand('/help')}
+//                 >
+//                     <div className="command-header">
+//                         <code className="command-name">/help</code>
+//                     </div>
+//                     <div className="command-description">{COMMANDS[0].description}</div>
+//                     {expandedCommand === '/help' && (
+//                         <div className="command-help-content">
+//                             <pre>{getHelpContent()}</pre>
+//                         </div>
+//                     )}
+//                     <div className="command-example">
+//                         <strong>Example:</strong> <code>{COMMANDS[0].example}</code>
+//                     </div>
+//                 </div>
 
-                <div
-                    className={`command-item clickable ${expandedCommand === '/tone' ? 'expanded' : ''}`}
-                    onClick={() => toggleExpand('/tone')}
-                >
-                    <div className="command-header">
-                        <code className="command-name">/tone &lt;name&gt;</code>
-                    </div>
-                    <div className="command-description">{COMMANDS[1].description}</div>
-                    {expandedCommand === '/tone' && (
-                        <div className="command-help-content">
-                            <div className="command-usage">
-                                <strong>Usage:</strong> <code>{COMMANDS[1].usage}</code>
-                            </div>
-                            <div className="command-example">
-                                <strong>Example:</strong> <code>{COMMANDS[1].example}</code>
-                            </div>
-                            <div className="command-notes">{COMMANDS[1].notes}</div>
-                            <div className="available-tones">
-                                <strong>Available tones:</strong>
-                                <div className="tones-list">
-                                    {TONES.map(tone => (
-                                        <div key={tone.id} className="tone-option">
-                                            <span className="tone-emoji">{tone.label.split(' ')[0]}</span>
-                                            <span className="tone-name">{tone.id}</span>
-                                            <span className="tone-desc">{tone.description}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
-            <div className="footer">
-                <p className="tip">💡 Click commands to expand details, or use buttons to execute in chat.</p>
-            </div>
-        </div>
-    );
-}
+//                 <div
+//                     className={`command-item clickable ${expandedCommand === '/tone' ? 'expanded' : ''}`}
+//                     onClick={() => toggleExpand('/tone')}
+//                 >
+//                     <div className="command-header">
+//                         <code className="command-name">/tone &lt;name&gt;</code>
+//                     </div>
+//                     <div className="command-description">{COMMANDS[1].description}</div>
+//                     {expandedCommand === '/tone' && (
+//                         <div className="command-help-content">
+//                             <div className="command-usage">
+//                                 <strong>Usage:</strong> <code>{COMMANDS[1].usage}</code>
+//                             </div>
+//                             <div className="command-example">
+//                                 <strong>Example:</strong> <code>{COMMANDS[1].example}</code>
+//                             </div>
+//                             <div className="command-notes">{COMMANDS[1].notes}</div>
+//                             <div className="available-tones">
+//                                 <strong>Available tones:</strong>
+//                                 <div className="tones-list">
+//                                     {TONES.map(tone => (
+//                                         <div key={tone.id} className="tone-option">
+//                                             <span className="tone-emoji">{tone.label.split(' ')[0]}</span>
+//                                             <span className="tone-name">{tone.id}</span>
+//                                             <span className="tone-desc">{tone.description}</span>
+//                                         </div>
+//                                     ))}
+//                                 </div>
+//                             </div>
+//                         </div>
+//                     )}
+//                 </div>
+//             </div>
+//             <div className="footer">
+//                 <p className="tip">💡 Click commands to expand details, or use buttons to execute in chat.</p>
+//             </div>
+//         </div>
+//     );
+// }
 
 interface HistoryItem {
     id: string;
@@ -655,10 +629,10 @@ function HistoryTab({ allTones }: { allTones: any[] }) {
     );
 }
 
-interface SettingsTabProps {
-    settings: any;
-    onSettingsChange: (settings: any) => void;
-}
+// interface SettingsTabProps {
+//     settings: any;
+//     onSettingsChange: (settings: any) => void;
+// }
 
 // function SettingsTab({ settings, onSettingsChange }: SettingsTabProps) {
 //     const [apiKey, setApiKey] = useState(settings.apiKey || '');
@@ -1082,13 +1056,13 @@ function Popup() {
                     <Bot size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
                     <span>Generate</span>
                 </button>
-                <button
+                {/* <button
                     className={`tab-btn ${activeTab === 'commands' ? 'active' : ''}`}
                     onClick={() => setActiveTab('commands')}
                 >
                     <Terminal size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
                     <span>Commands</span>
-                </button>
+                </button> */}
                 <button
                     className={`tab-btn ${activeTab === 'guide' ? 'active' : ''}`}
                     onClick={() => setActiveTab('guide')}
@@ -1195,7 +1169,7 @@ function Popup() {
 
                 {activeTab === 'guide' && <GuideTab />}
 
-                {activeTab === 'commands' && <CommandsTab />}
+                {/* {activeTab === 'commands' && <CommandsTab />} */}
 
                 {activeTab === 'history' && <HistoryTab allTones={allTones} />}
 
